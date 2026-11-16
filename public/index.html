@@ -1607,7 +1607,7 @@ function AuthScreen() {
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const send = async () => { if (!validEmail) { setErr("Enter a valid email address."); return; }
-    setBusy(true); setErr(""); try { await sendCode(email.trim()); setStep("code"); } catch (e) { setErr(e.message || "Couldn't send the email. Try again in a minute."); } setBusy(false); };
+    setBusy(true); setErr(""); try { await sendCode(email.trim()); setStep("code"); } catch (e) { setErr(e.status === 429 || /rate limit/i.test(e.message || "") ? "Too many sign-in emails were sent recently. Wait a bit, then try again. If you already got a code, enter it instead." : (e.message || "Couldn't send the email. Try again in a minute.")); } setBusy(false); };
   const verify = async () => { const t = code.replace(/\D/g, ""); if (t.length < 6) { setErr("Enter the code from the email."); return; }
     setBusy(true); setErr(""); try { await verifyCode(email.trim(), t); } catch (e) { setErr("That code didn't work. Check it, or send a new one."); } setBusy(false); };
   return html`<div class="wrap" style="padding-top:48px;max-width:520px;margin:0 auto">
