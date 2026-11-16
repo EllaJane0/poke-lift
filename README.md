@@ -13,8 +13,8 @@ Each person signs in with their email and a one-time code. Their workouts, templ
 **1. Create the database (Supabase)**
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open **SQL Editor → New query**, paste the contents of `supabase/schema.sql`, and click **Run**.
-3. Go to **Authentication → Emails → Templates → Magic Link** and make sure the email includes the code, for example add the line `Your PokéLift code: {{ .Token }}`. (Home-screen apps on iPhone can't receive links from Mail, so people sign in by typing the code.)
-4. Go to **Authentication → URL Configuration** and set **Site URL** to your Vercel address (e.g. `https://poke-lift.vercel.app`).
+3. Go to **Authentication → Emails → Templates** and add the code to **both** the **Confirm signup** template (first sign-in) and the **Magic Link** template (every sign-in after), for example the line `Your PokéLift code: {{ .Token }}`. Home-screen apps on iPhone can't receive links from Mail, so people sign in by typing the code.
+4. Go to **Authentication → URL Configuration**, set **Site URL** to your Vercel address (e.g. `https://poke-lift.vercel.app`), and add the same address to **Redirect URLs**. If this is left at the default `http://localhost:3000`, the link in the email sends people to a broken page.
 5. Go to **Project Settings → API** and copy the **Project URL** and the **anon / publishable key**.
 
 **2. Deploy (Vercel)**
