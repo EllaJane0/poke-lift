@@ -4,13 +4,28 @@ A personal workout tracker where the weight you lift levels up a team of Gen 1 P
 
 Personal, non-commercial fan project. Pokémon is © Nintendo / Game Freak / The Pokémon Company. Game data and sprites come from [PokéAPI](https://pokeapi.co).
 
-## Deploy on Vercel
+## Accounts and data
 
-1. Push this repo to GitHub.
-2. In Vercel, choose **Add New → Project**, import the repo, and keep the defaults (`vercel.json` sets the build).
-3. Open the deployed URL on your iPhone in Safari, tap **Share → Add to Home Screen**.
+Each person signs in with their email and a one-time code. Their workouts, templates, calendar, Pokémon, eggs, and badges are stored in Supabase under their account, protected by row-level security so nobody can read anyone else's data. The app also keeps a copy on the device, so it opens instantly, works offline at the gym, and syncs when it's back online.
 
-Your data is stored in that browser on your phone. Use **Settings → Export workouts as CSV** now and then as a backup.
+## Set up (one time)
+
+**1. Create the database (Supabase)**
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Open **SQL Editor → New query**, paste the contents of `supabase/schema.sql`, and click **Run**.
+3. Go to **Authentication → Emails → Templates → Magic Link** and make sure the email includes the code, for example add the line `Your PokéLift code: {{ .Token }}`. (Home-screen apps on iPhone can't receive links from Mail, so people sign in by typing the code.)
+4. Go to **Authentication → URL Configuration** and set **Site URL** to your Vercel address (e.g. `https://poke-lift.vercel.app`).
+5. Go to **Project Settings → API** and copy the **Project URL** and the **anon / publishable key**.
+
+**2. Deploy (Vercel)**
+1. In Vercel: **Add New → Project**, import this repo.
+2. Under **Environment Variables**, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` with the values from step 1.5. (If you connect Vercel's Supabase integration instead, its variable names work too.)
+3. Click **Deploy**. Changing environment variables later needs a redeploy to take effect.
+4. Open the site in Safari on your iPhone and tap **Share → Add to Home Screen**.
+
+The anon key is meant to be public; row-level security is what keeps each person's data private. Never put the `service_role` key in Vercel for this app.
+
+Without the two environment variables, the app still builds and runs, but in on-device mode: no sign-in, and data stays in that one browser.
 
 ## Develop
 
@@ -20,7 +35,8 @@ npx serve public     # preview locally
 ```
 
 - `src/logic.js` – XP, leveling, evolution, workout math, PRs, gyms, battle engine (Gen 3 rules)
-- `src/store.js` – state and saving (localStorage; syncs to a Claude account when run as a claude.ai artifact)
+- `src/store.js` – state, per-user local cache, Supabase sign-in and sync (or Claude account storage when run as a claude.ai artifact)
+- `supabase/schema.sql` – tables and row-level security
 - `src/ui1.js` – home, calendar, templates, exercises, history, settings
 - `src/ui2.js` – workout logger, finish flow, editing past workouts, level-up prompts
 - `src/ui3.js` – team, eggs, Pokédex, gyms, battles, app shell

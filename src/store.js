@@ -38,39 +38,132 @@ function defaultCore() {
   };
 }
 
-const S = { core: LS.get("pl.core") || defaultCore(), sessions: LS.get("pl.sessions") || [], active: LS.get("pl.active"), sync: "device", hist: null };
+/* Three modes: "cloud" (Supabase accounts, used on Vercel), "claude" (claude.ai artifact storage), "local" (this browser only). */
+const CFG = window.PL_CONFIG || {};
+const MODE = CFG.supabaseUrl && CFG.supabaseKey && window.supabase ? "cloud" : "local";
+let NS = "pl.";
+const S = { core: null, sessions: [], active: null, sync: "device", hist: null, auth: { state: MODE === "cloud" ? "loading" : "none", email: "", uid: null } };
+function loadLocal() { S.core = LS.get(NS + "core") || defaultCore(); S.sessions = LS.get(NS + "sessions") || []; S.active = LS.get(NS + "active"); S.hist = null; }
+if (MODE !== "cloud") loadLocal();
 let rerender = () => {};
 const setRerender = f => { rerender = f; };
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
 
-/* ---------- remote sync (db capability), localStorage first ---------- */
-const R = { db: null, base: null, main: null, sess: null, act: null };
-const inflight = {}, dirty = {};
-function put(key, ref, getData) {
-  if (!ref) return;
-  if (inflight[key]) { dirty[key] = getData; return; }
+/* ---------- write queue: one write at a time per key, latest data wins, failed writes retry ---------- */
+const R = { db: null, base: null, main: null, sess: null, act: null, sb: null };
+const inflight = {}, pending = {};
+function put(key, write) {
+  if (!write) return;
+  pending[key] = write;
+  if (inflight[key]) return;
   inflight[key] = (async () => {
-    let fn = getData;
-    while (fn) { dirty[key] = null; const d = fn(); try { if (d == null) await ref.delete(); else await ref.set(d); S.sync = "synced"; } catch (e) { S.sync = "error"; } fn = dirty[key]; }
+    while (pending[key]) { const w = pending[key]; pending[key] = null;
+      try { await w(); S.sync = "synced"; }
+      catch (e) { S.sync = "error"; if (!pending[key]) pending[key] = w; inflight[key] = null; setTimeout(() => flushKey(key), 15000); rerender(); return; } }
     inflight[key] = null;
   })();
 }
+function flushKey(key) { const w = pending[key]; if (w && !inflight[key]) { pending[key] = null; put(key, w); } }
+function flushAll() { Object.keys(pending).forEach(flushKey); }
+window.addEventListener("online", flushAll);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") flushAll(); });
+function hasPending() { return Object.values(pending).some(Boolean) || Object.values(inflight).some(Boolean); }
+
+/* remote writers per mode */
+const remote = {
+  core() {
+    if (R.sb) return async () => { const { error } = await R.sb.from("pokelift_state").upsert({ user_id: S.auth.uid, core: S.core, updated_at: new Date().toISOString() }); if (error) throw error; };
+    if (R.main) return () => R.main.set(S.core);
+  },
+  active() {
+    if (R.sb) return async () => { const { error } = await R.sb.from("pokelift_state").upsert({ user_id: S.auth.uid, active: S.active }); if (error) throw error; };
+    if (R.act) return () => (S.active ? R.act.set({ s: S.active }) : R.act.delete());
+  },
+  session(s) {
+    if (R.sb) return async () => { const { error } = await R.sb.from("pokelift_sessions").upsert({ user_id: S.auth.uid, id: s.id, data: s, ended_at: new Date(s.end).toISOString(), updated_at: new Date().toISOString() }); if (error) throw error; };
+    if (R.sess) return () => R.sess.doc(s.id).set(s);
+  },
+  delSession(id) {
+    if (R.sb) return async () => { const { error } = await R.sb.from("pokelift_sessions").delete().eq("id", id); if (error) throw error; };
+    if (R.sess) return () => R.sess.doc(id).delete();
+  },
+};
 let coreTimer = null, actTimer = null;
 function saveCore() {
-  S.core.updated = Date.now(); LS.set("pl.core", S.core);
-  clearTimeout(coreTimer); coreTimer = setTimeout(() => put("main", R.main, () => S.core), 700);
+  S.core.updated = Date.now(); LS.set(NS + "core", S.core);
+  clearTimeout(coreTimer); coreTimer = setTimeout(() => put("main", remote.core()), 700);
 }
-function saveSessionsLocal() { LS.set("pl.sessions", S.sessions); S.hist = null; }
-function saveSession(s) { saveSessionsLocal(); if (R.sess) put("s:" + s.id, R.sess.doc(s.id), () => s); }
-function deleteSession(id) { S.sessions = S.sessions.filter(s => s.id !== id); saveSessionsLocal(); if (R.sess) put("s:" + id, R.sess.doc(id), () => null); }
+function saveSessionsLocal() { LS.set(NS + "sessions", S.sessions); S.hist = null; }
+function saveSession(s) { saveSessionsLocal(); put("s:" + s.id, remote.session(s)); }
+function deleteSession(id) { S.sessions = S.sessions.filter(s => s.id !== id); saveSessionsLocal(); put("s:" + id, remote.delSession(id)); }
 function saveActive() {
   if (S.active) S.active.updated = Date.now();
-  LS.set("pl.active", S.active);
-  clearTimeout(actTimer); actTimer = setTimeout(() => put("active", R.act, () => (S.active ? { s: S.active } : null)), 1500);
+  LS.set(NS + "active", S.active);
+  clearTimeout(actTimer); actTimer = setTimeout(() => put("active", remote.active()), 1500);
 }
 function mutate(fn) { fn(); saveCore(); rerender(); }
 function history() { if (!S.hist) S.hist = PL.buildHistory(S.sessions); return S.hist; }
 
-async function connect() {
+/* merge a remote snapshot into local state: newer core/active wins, sessions are unioned */
+function mergeRemote(remCore, remSessions, remActive) {
+  const local = LS.get(NS + "core");
+  if (remCore) { if (!local || (remCore.updated || 0) >= (local.updated || 0)) S.core = JSON.parse(JSON.stringify(remCore)); else put("main", remote.core()); }
+  else if (local && local.game && local.game.started) put("main", remote.core());
+  const merged = {}; remSessions.forEach(x => { merged[x.id] = JSON.parse(JSON.stringify(x)); });
+  for (const s of S.sessions) if (!merged[s.id]) { merged[s.id] = s; put("s:" + s.id, remote.session(s)); }
+  S.sessions = Object.values(merged); saveSessionsLocal();
+  if (remActive && (!S.active || (remActive.updated || 0) > (S.active.updated || 0))) { S.active = JSON.parse(JSON.stringify(remActive)); LS.set(NS + "active", S.active); }
+  else if (S.active && !remActive) put("active", remote.active());
+  LS.set(NS + "core", S.core);
+}
+
+/* ---------- cloud mode (Supabase) ---------- */
+async function cloudStart() {
+  R.sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "pl.auth" } });
+  R.sb.auth.onAuthStateChange((ev, session) => {
+    if (session && session.user) { if (S.auth.uid !== session.user.id) setTimeout(() => enterUser(session.user)); }
+    else if (ev === "SIGNED_OUT" || ev === "INITIAL_SESSION") { leaveUser(); }
+  });
+}
+async function enterUser(user) {
+  S.auth = { state: "in", email: user.email || "", uid: user.id };
+  NS = "pl." + user.id + ".";
+  // first account to sign in on this device adopts any data logged before accounts existed
+  if (!LS.get(NS + "core") && LS.get("pl.core") && !LS.get("pl.legacyClaimed")) {
+    LS.set(NS + "core", LS.get("pl.core")); LS.set(NS + "sessions", LS.get("pl.sessions")); LS.set(NS + "active", LS.get("pl.active")); LS.set("pl.legacyClaimed", user.id);
+  }
+  loadLocal(); S.sync = "device"; S.auth.ready = false; rerender();
+  try {
+    const st = await R.sb.from("pokelift_state").select("core,active").maybeSingle(); if (st.error) throw st.error;
+    const rows = []; for (let from = 0; ; from += 1000) {
+      const r = await R.sb.from("pokelift_sessions").select("data").order("ended_at", { ascending: true }).range(from, from + 999);
+      if (r.error) throw r.error; rows.push(...r.data.map(x => x.data)); if (r.data.length < 1000) break; }
+    if (S.auth.uid !== user.id) return;
+    mergeRemote(st.data && st.data.core, rows, st.data && st.data.active);
+    S.sync = "synced";
+  } catch (e) { S.sync = "error"; }
+  S.auth.ready = true; rerender();
+}
+function leaveUser() {
+  S.auth = { state: "out", email: "", uid: null }; NS = "pl."; S.core = null; S.sessions = []; S.active = null; S.hist = null;
+  Object.keys(pending).forEach(k => { pending[k] = null; }); rerender();
+}
+async function sendCode(email) {
+  const { error } = await R.sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true } });
+  if (error) throw error;
+}
+async function verifyCode(email, token) {
+  const { error } = await R.sb.auth.verifyOtp({ email, token, type: "email" });
+  if (error) throw error;
+}
+async function signOut() { await R.sb.auth.signOut(); }
+async function eraseRemote() {
+  if (!R.sb) return;
+  await R.sb.from("pokelift_sessions").delete().eq("user_id", S.auth.uid);
+}
+
+/* ---------- claude.ai artifact mode ---------- */
+async function claudeConnect() {
   try {
     const c = window.claude; if (!c || !c.use) return;
     const [db, user] = await Promise.all([c.use("db"), c.use("user")]);
@@ -79,18 +172,11 @@ async function connect() {
     R.db = db; R.base = db.collection("data/users/" + id); R.main = R.base.doc("main"); R.sess = R.main.collection("sessions"); R.act = R.base.doc("active");
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 10000));
     const [m, ss, a] = await Promise.race([Promise.all([R.main.get(), R.sess.limit(1000).get(), R.act.get()]), timeout]);
-    const local = LS.get("pl.core");
-    if (m.exists) { const rem = m.data(); if (!local || (rem.updated || 0) >= (local.updated || 0)) S.core = JSON.parse(JSON.stringify(rem)); else put("main", R.main, () => S.core); }
-    else if (local) put("main", R.main, () => S.core);
-    const remote = {}; ss.docs.forEach(d => { remote[d.id] = JSON.parse(JSON.stringify(d.data())); });
-    const merged = { ...remote };
-    for (const s of S.sessions) if (!merged[s.id]) { merged[s.id] = s; put("s:" + s.id, R.sess.doc(s.id), () => s); }
-    S.sessions = Object.values(merged); saveSessionsLocal();
-    if (a.exists) { const ra = a.data().s; if (ra && (!S.active || (ra.updated || 0) > (S.active.updated || 0))) { S.active = JSON.parse(JSON.stringify(ra)); LS.set("pl.active", S.active); } }
-    else if (S.active) put("active", R.act, () => ({ s: S.active }));
-    S.sync = "synced"; LS.set("pl.core", S.core); rerender();
-  } catch (e) { S.sync = S.sync === "synced" ? "synced" : "device"; rerender(); }
+    mergeRemote(m.exists ? m.data() : null, ss.docs.map(d => d.data()), a.exists ? a.data().s : null);
+    S.sync = "synced"; rerender();
+  } catch (e) { rerender(); }
 }
+function connect() { if (MODE === "cloud") cloudStart(); else claudeConnect(); }
 
 /* ---------- domain helpers ---------- */
 const ex = id => S.core.exercises[id] || { id, name: id, kind: "weight", mod: 0 };

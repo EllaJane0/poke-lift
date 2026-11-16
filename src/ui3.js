@@ -214,9 +214,39 @@ function Onboard() {
     <button class="btn pri wide" style="margin-top:8px" disabled=${!ok} onClick=${() => mutate(() => { S.core.settings.bw = parseFloat(bw); S.core.bwlog.push({ d: Date.now(), w: parseFloat(bw) }); addMon(PL.newMon(pick, 5)); G_().started = true; })}>Start training</button>
   </div>`;
 }
+function Loading({ text = "Loading" }) {
+  return html`<div class="wrap center" style="padding-top:40vh;color:var(--fg2)">${text}…</div>`;
+}
+function AuthScreen() {
+  const [email, setEmail] = useState(""); const [code, setCode] = useState(""); const [step, setStep] = useState("email");
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const send = async () => { if (!validEmail) { setErr("Enter a valid email address."); return; }
+    setBusy(true); setErr(""); try { await sendCode(email.trim()); setStep("code"); } catch (e) { setErr(e.message || "Couldn't send the email. Try again in a minute."); } setBusy(false); };
+  const verify = async () => { const t = code.replace(/\D/g, ""); if (t.length < 6) { setErr("Enter the code from the email."); return; }
+    setBusy(true); setErr(""); try { await verifyCode(email.trim(), t); } catch (e) { setErr("That code didn't work. Check it, or send a new one."); } setBusy(false); };
+  return html`<div class="wrap" style="padding-top:48px;max-width:520px;margin:0 auto">
+    <h1 style="font-size:32px;margin:0 0 6px">PokéLift</h1>
+    <p class="muted" style="margin:0 0 22px">Sign in to keep your workouts, Pokémon, and progress on every device.</p>
+    ${step === "email" ? html`<form onSubmit=${e => { e.preventDefault(); send(); }}>
+        <label class="l" for="au-email">Email</label><input id="au-email" class="f" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" value=${email} onInput=${e => { setEmail(e.target.value); setErr(""); }} />
+        ${err && html`<div class="small" style="color:var(--red);margin-top:8px">${err}</div>`}
+        <button class="btn pri wide" style="margin-top:14px" disabled=${busy}>${busy ? "Sending…" : "Email me a sign-in code"}</button></form>
+        <p class="tiny muted">New here? The same code creates your account.</p>`
+    : html`<form onSubmit=${e => { e.preventDefault(); verify(); }}>
+        <p class="small">We sent a code to <b>${email.trim()}</b>.</p>
+        <label class="l" for="au-code">Sign-in code</label><input id="au-code" class="f num" style="font-size:22px;letter-spacing:.2em;text-align:center" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" value=${code} onInput=${e => { setCode(e.target.value); setErr(""); }} />
+        ${err && html`<div class="small" style="color:var(--red);margin-top:8px">${err}</div>`}
+        <button class="btn pri wide" style="margin-top:14px" disabled=${busy}>${busy ? "Checking…" : "Sign in"}</button></form>
+        <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn ghost" onClick=${() => { setStep("email"); setCode(""); setErr(""); }}>Use a different email</button><button class="btn ghost" disabled=${busy} onClick=${send}>Send a new code</button></div>
+        <p class="tiny muted">Opening the link in the email works too, if you open it in the same browser.</p>`}
+  </div>`;
+}
 function App() {
   const [, setT] = useState(0);
   useEffect(() => { setRerender(() => setT(t => t + 1)); connect(); }, []);
+  if (MODE === "cloud" && S.auth.state !== "in") return S.auth.state === "loading" ? html`<${Loading} />` : html`<${AuthScreen} />`;
+  if (MODE === "cloud" && !S.auth.ready && !G_().started) return html`<${Loading} text="Loading your data" />`;
   if (!G_().started) return html`<${Onboard} />${U.sheets.length > 0 && html`<${SheetHost} />`}`;
   const tabs = [["home", "Home", IC.home], ["plan", "Plan", IC.plan], ["lifts", "Workouts", IC.lift], ["team", "Team", IC.team], ["gyms", "Gyms", IC.gym]];
   const View = { home: Home, plan: Plan, lifts: Lifts, team: Team, gyms: Gyms }[U.tab];

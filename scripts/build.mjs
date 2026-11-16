@@ -1,6 +1,11 @@
 // Builds public/index.html from src/ and data/. Run: node scripts/build.mjs
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 const r = p => readFileSync(new URL("../" + p, import.meta.url), "utf8");
+const env = process.env;
+const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || "";
+const key = env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
+if (!url || !key) console.warn("Supabase env vars not set: building in on-device mode (no accounts).");
+const config = JSON.stringify({ supabaseUrl: url, supabaseKey: key });
 const js = ["logic.js", "store.js", "ui1.js", "ui2.js", "ui3.js"].map(f => r("src/" + f)).join("\n");
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -13,6 +18,8 @@ ${r("src/head.html")}
 </head><body>
 <div id="root"></div>
 <script src="https://unpkg.com/htm@3.1.1/preact/standalone.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script>window.PL_CONFIG=${config};</script>
 <script>window.__GAME__=${r("data/game-data.json").trim()};</script>
 <script>
 ${js}
