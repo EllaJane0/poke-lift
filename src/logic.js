@@ -65,6 +65,17 @@ function removeXP(m, amt) {
   while (m.lv > 1 && m.xp < expFor(g, m.lv)) m.lv--;
   return before - m.xp;
 }
+/* Pounds become levels: every `lbPerLevel` pounds = 1 level, at any level.
+   Returns the XP that many levels is worth for this Pokémon from where it stands now. */
+function levelsToXP(m, levels) {
+  const g = mon(m.sp).g; let L = m.lv, cur = m.xp, xp = 0, f = Math.max(0, levels);
+  while (f > 1e-9 && L < 100) {
+    const lo = expFor(g, L), hi = expFor(g, L + 1), span = hi - lo, room = hi - cur, rf = room / span;
+    if (f >= rf) { xp += room; f -= rf; cur = hi; L++; } else { xp += f * span; f = 0; }
+  }
+  return Math.round(xp);
+}
+const lbToXP = (m, lb, lbPerLevel) => levelsToXP(m, lb / lbPerLevel);
 function evoOptions(m) {
   const e = mon(m.sp).e.filter(x => x.lv <= m.lv);
   if (!e.length) return [];
@@ -122,28 +133,28 @@ function priorSetsFor(hist, exId, excludeSid) {
 /* ---------- gyms ---------- */
 const T = (cls, tier, team) => ({ cls, tier, team: team.map(([n, l]) => [sid(n), l]) });
 const GYMS = [
- { name:"Pewter Gym", leader:"Brock", type:"Rock", badge:"Boulder", xp:3000, ladder:[
+ { name:"Pewter Gym", leader:"Brock", type:"Rock", badge:"Boulder", lv:2, ladder:[
   T("Camper Liam","easy",[["Geodude",9]]), T("Hiker Marcos","medium",[["Geodude",10],["Sandshrew",11]]),
   T("Picnicker Jana","hard",[["Sandshrew",12],["Diglett",12],["Geodude",13]]), T("Leader Brock","leader",[["Geodude",14],["Onix",16]])]},
- { name:"Cerulean Gym", leader:"Misty", type:"Water", badge:"Cascade", xp:8000, ladder:[
+ { name:"Cerulean Gym", leader:"Misty", type:"Water", badge:"Cascade", lv:3, ladder:[
   T("Swimmer Luis","easy",[["Horsea",16],["Shellder",16]]), T("Picnicker Diana","medium",[["Goldeen",18],["Psyduck",18]]),
   T("Swimmer Parker","hard",[["Seel",19],["Poliwag",19],["Krabby",20]]), T("Leader Misty","leader",[["Staryu",20],["Starmie",23]])]},
- { name:"Vermilion Gym", leader:"Lt. Surge", type:"Electric", badge:"Thunder", xp:15000, ladder:[
+ { name:"Vermilion Gym", leader:"Lt. Surge", type:"Electric", badge:"Thunder", lv:4, ladder:[
   T("Sailor Dwayne","easy",[["Voltorb",20],["Pikachu",20]]), T("Engineer Baily","medium",[["Magnemite",21],["Voltorb",21]]),
   T("Gentleman Tucker","hard",[["Pikachu",23],["Magnemite",23],["Pikachu",23]]), T("Leader Lt. Surge","leader",[["Voltorb",23],["Pikachu",24],["Raichu",26]])]},
- { name:"Celadon Gym", leader:"Erika", type:"Grass", badge:"Rainbow", xp:25000, ladder:[
+ { name:"Celadon Gym", leader:"Erika", type:"Grass", badge:"Rainbow", lv:5, ladder:[
   T("Lass Kay","easy",[["Oddish",25],["Bellsprout",25]]), T("Beauty Bridget","medium",[["Bellsprout",26],["Weepinbell",27]]),
   T("Cooltrainer Mary","hard",[["Gloom",28],["Exeggcute",28],["Tangela",28]]), T("Leader Erika","leader",[["Tangela",30],["Victreebel",31],["Vileplume",33]])]},
- { name:"Fuchsia Gym", leader:"Koga", type:"Poison", badge:"Soul", xp:40000, ladder:[
+ { name:"Fuchsia Gym", leader:"Koga", type:"Poison", badge:"Soul", lv:6, ladder:[
   T("Juggler Kirk","easy",[["Grimer",34],["Koffing",34]]), T("Tamer Phil","medium",[["Ekans",35],["Arbok",36]]),
   T("Juggler Nate","hard",[["Venonat",37],["Muk",38],["Weezing",38]]), T("Leader Koga","leader",[["Koffing",39],["Muk",39],["Koffing",40],["Weezing",44]])]},
- { name:"Saffron Gym", leader:"Sabrina", type:"Psychic", badge:"Marsh", xp:55000, ladder:[
+ { name:"Saffron Gym", leader:"Sabrina", type:"Psychic", badge:"Marsh", lv:7, ladder:[
   T("Psychic Johan","easy",[["Slowpoke",38],["Drowzee",38]]), T("Psychic Tyron","medium",[["Kadabra",40],["Mr. Mime",40]]),
   T("Channeler Amanda","hard",[["Hypno",42],["Slowbro",42],["Kadabra",42]]), T("Leader Sabrina","leader",[["Kadabra",42],["Mr. Mime",43],["Venomoth",41],["Alakazam",46]])]},
- { name:"Cinnabar Gym", leader:"Blaine", type:"Fire", badge:"Volcano", xp:75000, ladder:[
+ { name:"Cinnabar Gym", leader:"Blaine", type:"Fire", badge:"Volcano", lv:8, ladder:[
   T("Burglar Quinn","easy",[["Growlithe",40],["Vulpix",40]]), T("Super Nerd Erik","medium",[["Vulpix",42],["Magmar",42]]),
   T("Burglar Ramon","hard",[["Ponyta",43],["Rapidash",44],["Ninetales",44]]), T("Leader Blaine","leader",[["Growlithe",45],["Ponyta",45],["Rapidash",47],["Arcanine",49]])]},
- { name:"Viridian Gym", leader:"Giovanni", type:"Ground", badge:"Earth", xp:100000, ladder:[
+ { name:"Viridian Gym", leader:"Giovanni", type:"Ground", badge:"Earth", lv:10, ladder:[
   T("Cooltrainer Samuel","easy",[["Sandslash",44],["Dugtrio",44]]), T("Tamer Jason","medium",[["Rhyhorn",46],["Nidorino",46],["Nidorina",46]]),
   T("Cooltrainer Yuji","hard",[["Nidoking",48],["Nidoqueen",48],["Rhyhorn",48]]), T("Leader Giovanni","leader",[["Rhyhorn",48],["Dugtrio",49],["Nidoqueen",50],["Nidoking",50],["Rhydon",53]])]},
 ];
@@ -154,7 +165,7 @@ const POOLS = {
   rare: "Bulbasaur,Charmander,Squirtle,Eevee,Dratini,Lapras,Snorlax,Scyther,Kangaskhan,Chansey,Tauros,Porygon,Omanyte,Kabuto,Aerodactyl,Ditto".split(",").map(sid),
 };
 const EGG = { common:{ label:"Common egg", steps:5000 }, uncommon:{ label:"Uncommon egg", steps:10000 }, rare:{ label:"Rare egg", steps:20000 } };
-const MILESTONES = [ { id:"s10", n:10, name:"10 Sessions", xp:5000 }, { id:"s25", n:25, name:"25 Sessions", xp:15000 }, { id:"s50", n:50, name:"50 Sessions", xp:35000 }, { id:"s100", n:100, name:"100 Sessions", xp:75000 } ];
+const MILESTONES = [ { id:"s10", n:10, name:"10 Sessions", lv:2 }, { id:"s25", n:25, name:"25 Sessions", lv:4 }, { id:"s50", n:50, name:"50 Sessions", lv:6 }, { id:"s100", n:100, name:"100 Sessions", lv:10 } ];
 
 /* ---------- battle engine (Gen 3 rules, simplified edge cases) ---------- */
 const STG = n => n >= 0 ? (2 + n) / 2 : 2 / (2 - n);
@@ -384,7 +395,7 @@ function lossInsight(B) {
   return `${mon(top.by).n}'s ${move(top.move).n} hit hardest${top.eff > 1 ? " (super effective)" : ""}.`;
 }
 
-return { G, TYPES, TC, eff, mon, move, sid, expFor, growthName, calcStats, movesAt, newMon, randIV, uid, awardXP, removeXP, evoOptions, evolve, relearnable, xpProgress,
+return { G, TYPES, TC, eff, mon, move, sid, expFor, growthName, calcStats, movesAt, newMon, randIV, uid, awardXP, removeXP, levelsToXP, lbToXP, evoOptions, evolve, relearnable, xpProgress,
   setLoad, sessionVolume, e1rm, buildHistory, lastFor, isPR, priorSetsFor,
   GYMS, TIER, POOLS, EGG, MILESTONES, newBattle, runTurn, aiChoose, doSwitch, effSpe, estDamage, lossInsight, battler };
 })();

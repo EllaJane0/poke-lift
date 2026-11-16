@@ -3,7 +3,7 @@ function Team() {
   const seg = U.teamSeg || "party"; const setSeg = s => { U.teamSeg = s; go(); };
   const g = G_();
   return html`<div class="wrap">
-    <div class="top"><h1>Team</h1>${g.bank > 0 && html`<span class="chip num">Bank ${g.bank.toLocaleString()} XP</span>`}</div>
+    <div class="top"><h1>Team</h1>${g.bank > 0 && html`<span class="chip num">Bank ${fmtLv(g.bank)}</span>`}</div>
     <div class="seg" style="margin-bottom:14px">${[["party","Party"],["box","Box"],["eggs",`Eggs${g.eggs.length ? " " + g.eggs.length : ""}`],["dex","Pokédex"]].map(([k, l]) => html`<button class=${seg === k ? "on" : ""} onClick=${() => setSeg(k)}>${l}</button>`)}</div>
     ${seg === "party" ? html`<${Party} />` : seg === "box" ? html`<${Box} />` : seg === "eggs" ? html`<${Eggs} />` : html`<${Dex} />`}
   </div>`;
@@ -47,7 +47,7 @@ function MonSheet({ uid }) {
     ${evo.length > 0 && html`<div class="small muted" style="margin-top:8px">${evo.length > 1 ? `Evolves at Lv ${evo[0].lv} into your choice of ${evo.map(e => PL.mon(e.to).n).join(", ")}` : `Evolves at Lv ${evo[0].lv} into ${PL.mon(evo[0].to).n}`}${m.evoNo != null && m.lv >= evo[0].lv ? " · asks again next level-up" : ""}</div>`}
     <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:14px">
       ${inParty && g.active !== uid && html`<button class="btn sm pri" onClick=${() => { mutate(() => { g.active = uid; }); toast(`${monName(m)} is now active`); }}>Make active</button>`}
-      ${g.bank > 0 && m.lv < 100 && html`<button class="btn sm" onClick=${() => openSheet(GiveXP, { uid })}>Give bank XP</button>`}
+      ${g.bank > 0 && m.lv < 100 && html`<button class="btn sm" onClick=${() => openSheet(GiveXP, { uid })}>Give bank levels</button>`}
       <button class="btn sm" onClick=${() => openSheet(RenameSheet, { value: m.nick || sp.n, onSave: v => mutate(() => { m.nick = v === sp.n ? "" : v; }) })}>Nickname</button>
       ${inParty && idx > 0 && html`<button class="btn sm" onClick=${() => mutate(() => { g.party.splice(idx, 1); g.party.splice(idx - 1, 0, uid); })}>Move up</button>`}
       ${inParty ? (g.party.length > 1 && html`<button class="btn sm" onClick=${() => { mutate(() => { g.party.splice(idx, 1); if (g.active === uid) g.active = g.party[0]; }); closeSheet(); toast("Moved to box"); }}>Send to box</button>`)
@@ -61,14 +61,15 @@ function MonSheet({ uid }) {
 }
 function GiveXP({ uid }) {
   const g = G_(); const m = monOf(uid); const p = PL.xpProgress(m);
-  const [v, setV] = useState(String(Math.min(g.bank, p.toNext)));
-  const give = () => { const n = Math.min(g.bank, Math.max(0, parseInt(v) || 0)); if (!n) return;
-    const r = PL.awardXP(m, n); g.bank -= r.gained; g.bankLog.push({ d: Date.now(), amt: -r.gained, why: "Gave to " + monName(m) });
+  const toNext = Math.round((1 - p.pct) * 100) / 100;
+  const [v, setV] = useState(String(Math.min(g.bank, toNext)));
+  const give = () => { const n = Math.min(g.bank, Math.max(0, parseFloat(v) || 0)); if (!n) return;
+    const r = PL.awardXP(m, PL.levelsToXP(m, n)); g.bank = Math.round((g.bank - n) * 100) / 100; g.bankLog.push({ d: Date.now(), amt: -n, why: "Gave to " + monName(m) });
     queueGrowth(m, r); saveCore(); closeAll(); toast(r.to > r.from ? `${monName(m)} grew to Lv ${r.to}!` : `+${r.gained.toLocaleString()} XP`); };
-  return html`<${Sheet} title=${"Give XP to " + monName(m)}><div class="small muted" style="margin-top:-6px">Bank balance ${g.bank.toLocaleString()} XP. This can't be undone.</div>
-    <label class="l" for="gx">Amount</label><input id="gx" class="f num" inputmode="numeric" value=${v} onInput=${e => setV(e.target.value.replace(/\D/g, ""))} />
-    <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm" onClick=${() => setV(String(Math.min(g.bank, p.toNext)))}>To Lv ${m.lv + 1}</button><button class="btn sm" onClick=${() => setV(String(g.bank))}>All</button></div>
-    <button class="btn pri wide" style="margin-top:14px" onClick=${give}>Give XP</button><//>`;
+  return html`<${Sheet} title=${"Give levels to " + monName(m)}><div class="small muted" style="margin-top:-6px">Bank balance ${fmtLv(g.bank)}. This can't be undone.</div>
+    <label class="l" for="gx">Levels to give</label><input id="gx" class="f num" inputmode="decimal" value=${v} onInput=${e => setV(e.target.value.replace(/[^0-9.]/g, ""))} />
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm" onClick=${() => setV(String(Math.min(g.bank, toNext)))}>To Lv ${m.lv + 1}</button><button class="btn sm" onClick=${() => setV(String(g.bank))}>All</button></div>
+    <button class="btn pri wide" style="margin-top:14px" onClick=${give}>Give levels</button><//>`;
 }
 function Eggs() {
   const g = G_(); const egg = g.eggs.find(e => e.id === g.incub);
@@ -111,7 +112,7 @@ function Gyms() {
 function GymSheet({ i }) {
   const gy = PL.GYMS[i]; const g = G_();
   return html`<${Sheet} title=${gy.name}>
-    <div class="small muted" style="margin:-8px 0 12px">${gy.type}-type gym · ${gy.badge} Badge · first leader win adds ${gy.xp.toLocaleString()} XP to your bank</div>
+    <div class="small muted" style="margin:-8px 0 12px">${gy.type}-type gym · ${gy.badge} Badge · first leader win adds ${fmtLv(gy.lv)} to your XP Bank</div>
     <div class="stack">${gy.ladder.map((o, j) => { const open = oppUnlocked(i, j); const wins = g.beaten[i + "-" + j] || 0; const tier = PL.TIER[o.tier];
       return html`<div class="card" style=${open ? "" : "opacity:.55"}>
         <div class="row"><div class="grow"><div class="b">${o.cls}</div><div class="small muted">${tier.label} · reward: ${PL.EGG[tier.egg].label.toLowerCase()}${wins ? ` · beaten ×${wins}` : ""}</div></div>
@@ -149,7 +150,7 @@ function rewardBattle() {
     const egg = { id: PL.uid(), tier, steps: 0, need: S.core.settings.eggSteps[tier], from: opp.cls };
     const key = B.gymIdx + "-" + B.oppIdx; const first = !g.beaten[key];
     mutate(() => { g.eggs.push(egg); if (!g.incub) g.incub = egg.id; g.beaten[key] = (g.beaten[key] || 0) + 1;
-      if (opp.tier === "leader" && !g.badges["g" + B.gymIdx]) { g.badges["g" + B.gymIdx] = Date.now(); g.bank += gy.xp; g.bankLog.push({ d: Date.now(), amt: gy.xp, why: gy.badge + " Badge" }); bt.badge = true; } });
+      if (opp.tier === "leader" && !g.badges["g" + B.gymIdx]) { g.badges["g" + B.gymIdx] = Date.now(); g.bank += gy.lv; g.bankLog.push({ d: Date.now(), amt: gy.lv, why: gy.badge + " Badge" }); bt.badge = true; } });
     bt.reward = { egg, first };
   } else bt.insight = PL.lossInsight(B);
 }
@@ -186,7 +187,7 @@ function Battle() {
     ${bt.phase === "over" && html`<div class="card" style="margin-top:12px">${B.over === "win" ? html`
         <div class="b" style="font-size:18px">You won!</div>
         ${bt.reward && html`<div class="row" style="margin-top:10px"><${Egg} tier=${bt.reward.egg.tier} /><div class="grow small">You got a <b>${PL.EGG[bt.reward.egg.tier].label.toLowerCase()}</b>. Hatches in ${bt.reward.egg.need.toLocaleString()} steps.</div></div>`}
-        ${bt.badge && html`<div class="row" style="margin-top:10px"><span class="badge" style=${`background:${TYPE_COL[PL.GYMS[B.gymIdx].type]}`}>${PL.GYMS[B.gymIdx].badge.slice(0, 2)}</span><div class="grow small">You earned the <b>${PL.GYMS[B.gymIdx].badge} Badge</b> and ${PL.GYMS[B.gymIdx].xp.toLocaleString()} XP for your bank.${B.gymIdx < 7 ? ` ${PL.GYMS[B.gymIdx + 1].name} is now open.` : ""}</div></div>`}`
+        ${bt.badge && html`<div class="row" style="margin-top:10px"><span class="badge" style=${`background:${TYPE_COL[PL.GYMS[B.gymIdx].type]}`}>${PL.GYMS[B.gymIdx].badge.slice(0, 2)}</span><div class="grow small">You earned the <b>${PL.GYMS[B.gymIdx].badge} Badge</b> and ${fmtLv(PL.GYMS[B.gymIdx].lv)} for your XP Bank.${B.gymIdx < 7 ? ` ${PL.GYMS[B.gymIdx + 1].name} is now open.` : ""}</div></div>`}`
       : html`<div class="b" style="font-size:18px">Not this time.</div><div class="small muted" style="margin:4px 0 10px">${bt.insight || ""} Train, level up, and try again.</div>
         <div class="row" style="gap:8px;flex-wrap:wrap">${B.theirs.map(m => html`<div class="center"><${Sprite} sp=${m.sp} size=${44} /><div class="tiny muted num">Lv ${m.lv}</div></div>`)}</div>`}
       <button class="btn pri wide" style="margin-top:12px" onClick=${exit}>Done</button></div>`}

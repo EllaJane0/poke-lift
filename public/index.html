@@ -236,6 +236,17 @@ function removeXP(m, amt) {
   while (m.lv > 1 && m.xp < expFor(g, m.lv)) m.lv--;
   return before - m.xp;
 }
+/* Pounds become levels: every `lbPerLevel` pounds = 1 level, at any level.
+   Returns the XP that many levels is worth for this Pokémon from where it stands now. */
+function levelsToXP(m, levels) {
+  const g = mon(m.sp).g; let L = m.lv, cur = m.xp, xp = 0, f = Math.max(0, levels);
+  while (f > 1e-9 && L < 100) {
+    const lo = expFor(g, L), hi = expFor(g, L + 1), span = hi - lo, room = hi - cur, rf = room / span;
+    if (f >= rf) { xp += room; f -= rf; cur = hi; L++; } else { xp += f * span; f = 0; }
+  }
+  return Math.round(xp);
+}
+const lbToXP = (m, lb, lbPerLevel) => levelsToXP(m, lb / lbPerLevel);
 function evoOptions(m) {
   const e = mon(m.sp).e.filter(x => x.lv <= m.lv);
   if (!e.length) return [];
@@ -293,28 +304,28 @@ function priorSetsFor(hist, exId, excludeSid) {
 /* ---------- gyms ---------- */
 const T = (cls, tier, team) => ({ cls, tier, team: team.map(([n, l]) => [sid(n), l]) });
 const GYMS = [
- { name:"Pewter Gym", leader:"Brock", type:"Rock", badge:"Boulder", xp:3000, ladder:[
+ { name:"Pewter Gym", leader:"Brock", type:"Rock", badge:"Boulder", lv:2, ladder:[
   T("Camper Liam","easy",[["Geodude",9]]), T("Hiker Marcos","medium",[["Geodude",10],["Sandshrew",11]]),
   T("Picnicker Jana","hard",[["Sandshrew",12],["Diglett",12],["Geodude",13]]), T("Leader Brock","leader",[["Geodude",14],["Onix",16]])]},
- { name:"Cerulean Gym", leader:"Misty", type:"Water", badge:"Cascade", xp:8000, ladder:[
+ { name:"Cerulean Gym", leader:"Misty", type:"Water", badge:"Cascade", lv:3, ladder:[
   T("Swimmer Luis","easy",[["Horsea",16],["Shellder",16]]), T("Picnicker Diana","medium",[["Goldeen",18],["Psyduck",18]]),
   T("Swimmer Parker","hard",[["Seel",19],["Poliwag",19],["Krabby",20]]), T("Leader Misty","leader",[["Staryu",20],["Starmie",23]])]},
- { name:"Vermilion Gym", leader:"Lt. Surge", type:"Electric", badge:"Thunder", xp:15000, ladder:[
+ { name:"Vermilion Gym", leader:"Lt. Surge", type:"Electric", badge:"Thunder", lv:4, ladder:[
   T("Sailor Dwayne","easy",[["Voltorb",20],["Pikachu",20]]), T("Engineer Baily","medium",[["Magnemite",21],["Voltorb",21]]),
   T("Gentleman Tucker","hard",[["Pikachu",23],["Magnemite",23],["Pikachu",23]]), T("Leader Lt. Surge","leader",[["Voltorb",23],["Pikachu",24],["Raichu",26]])]},
- { name:"Celadon Gym", leader:"Erika", type:"Grass", badge:"Rainbow", xp:25000, ladder:[
+ { name:"Celadon Gym", leader:"Erika", type:"Grass", badge:"Rainbow", lv:5, ladder:[
   T("Lass Kay","easy",[["Oddish",25],["Bellsprout",25]]), T("Beauty Bridget","medium",[["Bellsprout",26],["Weepinbell",27]]),
   T("Cooltrainer Mary","hard",[["Gloom",28],["Exeggcute",28],["Tangela",28]]), T("Leader Erika","leader",[["Tangela",30],["Victreebel",31],["Vileplume",33]])]},
- { name:"Fuchsia Gym", leader:"Koga", type:"Poison", badge:"Soul", xp:40000, ladder:[
+ { name:"Fuchsia Gym", leader:"Koga", type:"Poison", badge:"Soul", lv:6, ladder:[
   T("Juggler Kirk","easy",[["Grimer",34],["Koffing",34]]), T("Tamer Phil","medium",[["Ekans",35],["Arbok",36]]),
   T("Juggler Nate","hard",[["Venonat",37],["Muk",38],["Weezing",38]]), T("Leader Koga","leader",[["Koffing",39],["Muk",39],["Koffing",40],["Weezing",44]])]},
- { name:"Saffron Gym", leader:"Sabrina", type:"Psychic", badge:"Marsh", xp:55000, ladder:[
+ { name:"Saffron Gym", leader:"Sabrina", type:"Psychic", badge:"Marsh", lv:7, ladder:[
   T("Psychic Johan","easy",[["Slowpoke",38],["Drowzee",38]]), T("Psychic Tyron","medium",[["Kadabra",40],["Mr. Mime",40]]),
   T("Channeler Amanda","hard",[["Hypno",42],["Slowbro",42],["Kadabra",42]]), T("Leader Sabrina","leader",[["Kadabra",42],["Mr. Mime",43],["Venomoth",41],["Alakazam",46]])]},
- { name:"Cinnabar Gym", leader:"Blaine", type:"Fire", badge:"Volcano", xp:75000, ladder:[
+ { name:"Cinnabar Gym", leader:"Blaine", type:"Fire", badge:"Volcano", lv:8, ladder:[
   T("Burglar Quinn","easy",[["Growlithe",40],["Vulpix",40]]), T("Super Nerd Erik","medium",[["Vulpix",42],["Magmar",42]]),
   T("Burglar Ramon","hard",[["Ponyta",43],["Rapidash",44],["Ninetales",44]]), T("Leader Blaine","leader",[["Growlithe",45],["Ponyta",45],["Rapidash",47],["Arcanine",49]])]},
- { name:"Viridian Gym", leader:"Giovanni", type:"Ground", badge:"Earth", xp:100000, ladder:[
+ { name:"Viridian Gym", leader:"Giovanni", type:"Ground", badge:"Earth", lv:10, ladder:[
   T("Cooltrainer Samuel","easy",[["Sandslash",44],["Dugtrio",44]]), T("Tamer Jason","medium",[["Rhyhorn",46],["Nidorino",46],["Nidorina",46]]),
   T("Cooltrainer Yuji","hard",[["Nidoking",48],["Nidoqueen",48],["Rhyhorn",48]]), T("Leader Giovanni","leader",[["Rhyhorn",48],["Dugtrio",49],["Nidoqueen",50],["Nidoking",50],["Rhydon",53]])]},
 ];
@@ -325,7 +336,7 @@ const POOLS = {
   rare: "Bulbasaur,Charmander,Squirtle,Eevee,Dratini,Lapras,Snorlax,Scyther,Kangaskhan,Chansey,Tauros,Porygon,Omanyte,Kabuto,Aerodactyl,Ditto".split(",").map(sid),
 };
 const EGG = { common:{ label:"Common egg", steps:5000 }, uncommon:{ label:"Uncommon egg", steps:10000 }, rare:{ label:"Rare egg", steps:20000 } };
-const MILESTONES = [ { id:"s10", n:10, name:"10 Sessions", xp:5000 }, { id:"s25", n:25, name:"25 Sessions", xp:15000 }, { id:"s50", n:50, name:"50 Sessions", xp:35000 }, { id:"s100", n:100, name:"100 Sessions", xp:75000 } ];
+const MILESTONES = [ { id:"s10", n:10, name:"10 Sessions", lv:2 }, { id:"s25", n:25, name:"25 Sessions", lv:4 }, { id:"s50", n:50, name:"50 Sessions", lv:6 }, { id:"s100", n:100, name:"100 Sessions", lv:10 } ];
 
 /* ---------- battle engine (Gen 3 rules, simplified edge cases) ---------- */
 const STG = n => n >= 0 ? (2 + n) / 2 : 2 / (2 - n);
@@ -555,7 +566,7 @@ function lossInsight(B) {
   return `${mon(top.by).n}'s ${move(top.move).n} hit hardest${top.eff > 1 ? " (super effective)" : ""}.`;
 }
 
-return { G, TYPES, TC, eff, mon, move, sid, expFor, growthName, calcStats, movesAt, newMon, randIV, uid, awardXP, removeXP, evoOptions, evolve, relearnable, xpProgress,
+return { G, TYPES, TC, eff, mon, move, sid, expFor, growthName, calcStats, movesAt, newMon, randIV, uid, awardXP, removeXP, levelsToXP, lbToXP, evoOptions, evolve, relearnable, xpProgress,
   setLoad, sessionVolume, e1rm, buildHistory, lastFor, isPR, priorSetsFor,
   GYMS, TIER, POOLS, EGG, MILESTONES, newBattle, runTurn, aiChoose, doSwitch, effSpe, estDamage, lossInsight, battler };
 })();
@@ -588,7 +599,7 @@ function defaultCore() {
   const it = (ex, sets, reps) => ({ ex, sets, reps });
   return {
     v: 1, updated: Date.now(),
-    settings: { rate: 0.2, share: 0.5, bw: 180, rest: 90, eggSteps: { common: 5000, uncommon: 10000, rare: 20000 } },
+    settings: { lbPerLevel: 20000, share: 0.5, bw: 180, rest: 90, eggSteps: { common: 5000, uncommon: 10000, rare: 20000 } },
     bwlog: [], exercises,
     templates: [
       { id: PL.uid(), name: "Push", items: [it("barbell-bench-press",4,8), it("overhead-press",3,8), it("incline-dumbbell-press",3,10), it("lateral-raise",3,12), it("tricep-pushdown",3,12), it("push-up",2,15)] },
@@ -596,7 +607,7 @@ function defaultCore() {
       { id: PL.uid(), name: "Legs", items: [it("back-squat",4,6), it("romanian-deadlift",3,8), it("leg-press",3,10), it("leg-curl",3,12), it("standing-calf-raise",4,12)] },
     ],
     sched: {},
-    game: { started: false, mons: {}, party: [], active: null, bank: 0, bankLog: [], badges: {}, beaten: {}, eggs: [], incub: null, steps: 0, dex: [] },
+    game: { started: false, mons: {}, party: [], active: null, bank: 0, bankLv: true, bankLog: [], badges: {}, beaten: {}, eggs: [], incub: null, steps: 0, dex: [] },
   };
 }
 
@@ -605,7 +616,10 @@ const CFG = window.PL_CONFIG || {};
 const MODE = CFG.supabaseUrl && CFG.supabaseKey && window.supabase ? "cloud" : "local";
 let NS = "pl.";
 const S = { core: null, sessions: [], active: null, sync: "device", hist: null, auth: { state: MODE === "cloud" ? "loading" : "none", email: "", uid: null } };
-function loadLocal() { S.core = LS.get(NS + "core") || defaultCore(); S.sessions = LS.get(NS + "sessions") || []; S.active = LS.get(NS + "active"); S.hist = null; }
+function loadLocal() { S.core = migrate(LS.get(NS + "core") || defaultCore()); S.sessions = LS.get(NS + "sessions") || []; S.active = LS.get(NS + "active"); S.hist = null; }
+/* v2: XP comes from pounds-per-level; the XP Bank holds levels instead of raw XP */
+function migrate(c) { if (!c) return c; const st = c.settings || (c.settings = {}); if (!st.lbPerLevel) st.lbPerLevel = 20000; delete st.rate;
+  const g = c.game; if (g && !g.bankLv) { g.bank = Math.round(((g.bank || 0) / 1500) * 10) / 10; g.bankLv = true; } return c; }
 if (MODE !== "cloud") loadLocal();
 let rerender = () => {};
 const setRerender = f => { rerender = f; };
@@ -669,7 +683,7 @@ function history() { if (!S.hist) S.hist = PL.buildHistory(S.sessions); return S
 /* merge a remote snapshot into local state: newer core/active wins, sessions are unioned */
 function mergeRemote(remCore, remSessions, remActive) {
   const local = LS.get(NS + "core");
-  if (remCore) { if (!local || (remCore.updated || 0) >= (local.updated || 0)) S.core = JSON.parse(JSON.stringify(remCore)); else put("main", remote.core()); }
+  if (remCore) { if (!local || (remCore.updated || 0) >= (local.updated || 0)) S.core = migrate(JSON.parse(JSON.stringify(remCore))); else put("main", remote.core()); }
   else if (local && local.game && local.game.started) put("main", remote.core());
   const merged = {}; remSessions.forEach(x => { merged[x.id] = JSON.parse(JSON.stringify(x)); });
   for (const s of S.sessions) if (!merged[s.id]) { merged[s.id] = s; put("s:" + s.id, remote.session(s)); }
@@ -757,6 +771,7 @@ function addMon(m) {
   if (!g.active) g.active = m.uid;
 }
 function sessionsDone() { return S.sessions.length; }
+function fmtLv(n) { const r = Math.round(n * 100) / 100; return `${r} level${r === 1 ? "" : "s"}`; }
 function fmtVol(v) { return v >= 10000 ? (v / 1000).toFixed(1).replace(/\.0$/, "") + "k" : Math.round(v).toLocaleString(); }
 function fmtDur(ms) { const s = Math.max(0, Math.floor(ms / 1000)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${m}:${pad(x)}`; }
 function fmtDate(t, opts = { weekday: "short", month: "short", day: "numeric" }) { return new Date(t).toLocaleDateString(undefined, opts); }
@@ -838,7 +853,7 @@ function Home() {
         <div class="row" style="flex-wrap:wrap;gap:8px">${S.core.templates.map(t => html`<button class="btn sm" onClick=${() => startWorkout(t.id)}>${t.name}</button>`)}
         <button class="btn sm" onClick=${() => startWorkout(null)}>Empty workout</button></div></div>`}
       ${sessToday.map(s => html`<button class="card row" style="width:100%;text-align:left" onClick=${() => openSheet(SessionDetail, { id: s.id })}>
-        <div class="grow"><div class="b">${s.name} <span class="pill-ok small">· Done</span></div><div class="small muted num">${fmtVol(s.vol)} lb · +${s.xp.toLocaleString()} XP</div></div><span class="chev">›</span></button>`)}
+        <div class="grow"><div class="b">${s.name} <span class="pill-ok small">· Done</span></div><div class="small muted num">${fmtVol(s.vol)} lb · +${fmtLv(s.vol / (s.lbPerLevel || S.core.settings.lbPerLevel))}</div></div><span class="chev">›</span></button>`)}
     </div>
     <h2 class="sec">Progress</h2>
     <div class="stack">
@@ -849,7 +864,7 @@ function Home() {
       <button class="card row" style="width:100%;text-align:left" onClick=${() => { U.tab = "gyms"; go(); openSheet(GymSheet, { i: gi }); }}>
         <span class="badge" style=${`background:${TYPE_COL[gym.type]}`}>${gym.badge.slice(0, 2)}</span>
         <div class="grow"><div class="b">${allBadges ? "All 8 badges earned" : gym.name}</div><div class="small muted">${allBadges ? "Rematch any gym anytime" : `Next: ${gym.ladder[nextOpp].cls} · ${PL.TIER[gym.ladder[nextOpp].tier].label}`}</div></div><span class="chev">›</span></button>
-      ${g.bank > 0 && html`<button class="card row" style="width:100%;text-align:left" onClick=${() => { U.tab = "team"; U.teamSeg = "party"; go(); }}><div class="grow"><div class="b">XP Bank</div><div class="small muted num">${g.bank.toLocaleString()} XP ready to give to any Pokémon</div></div><span class="chev">›</span></button>`}
+      ${g.bank > 0 && html`<button class="card row" style="width:100%;text-align:left" onClick=${() => { U.tab = "team"; U.teamSeg = "party"; go(); }}><div class="grow"><div class="b">XP Bank</div><div class="small muted num">${fmtLv(g.bank)} ready to give to any Pokémon</div></div><span class="chev">›</span></button>`}
     </div>
   </div>`;
 }
@@ -1038,17 +1053,17 @@ function SessionDetail({ id }) {
   if (draft) return html`<${SessionEditor} s=${s} draft=${draft} setDraft=${setDraft} />`;
   return html`<${Sheet} title=${s.name}>
     <div class="muted small" style="margin:-8px 0 12px">${fmtDate(s.end, { weekday: "long", month: "long", day: "numeric" })} · bodyweight ${s.bw} lb</div>
-    <div class="stat-grid"><div class="tile"><div class="k">Time</div><div class="v">${fmtDur(s.end - s.start)}</div></div><div class="tile"><div class="k">Volume</div><div class="v">${fmtVol(s.vol)}</div></div><div class="tile"><div class="k">XP</div><div class="v">${s.xp.toLocaleString()}</div></div></div>
+    <div class="stat-grid"><div class="tile"><div class="k">Time</div><div class="v">${fmtDur(s.end - s.start)}</div></div><div class="tile"><div class="k">Volume</div><div class="v">${fmtVol(s.vol)}</div></div><div class="tile"><div class="k">Levels</div><div class="v">+${(s.vol / (s.lbPerLevel || S.core.settings.lbPerLevel)).toFixed(2)}</div></div></div>
     <div class="stack" style="margin-top:12px">${s.items.map(it => { const e = ex(it.ex); return html`<div class="card"><div class="b" style="margin-bottom:6px">${e.name}</div>
       ${it.sets.map((x, i) => html`<div class="row small num" style="height:24px"><span class="faint" style="width:24px">${x.warm ? "W" : i + 1 - it.sets.slice(0, i).filter(y => y.warm).length}</span><span class="grow">${setStr(e, x)}</span>${x.pr && html`<span class="tiny b" style="color:var(--pr)">PR</span>`}</div>`)}</div>`; })}</div>
     <button class="btn wide" style="margin-top:14px" onClick=${() => setDraft({ name: s.name, bw: String(s.bw), items: JSON.parse(JSON.stringify(s.items)) })}>Edit workout</button>
-    <button class="btn wide danger" style="margin-top:10px" onClick=${() => openSheet(Confirm, { title: "Delete this workout?", body: `It leaves your history and “last time” numbers, and its ${s.xp.toLocaleString()} XP is taken back from the Pokémon that earned it. Levels can drop; evolutions and learned moves stay.`, yes: "Delete", onYes: () => deleteWorkout(id) })}>Delete workout</button><//>`;
+    <button class="btn wide danger" style="margin-top:10px" onClick=${() => openSheet(Confirm, { title: "Delete this workout?", body: `It leaves your history and “last time” numbers, and the XP it gave is taken back from the Pokémon that earned it. Levels can drop; evolutions and learned moves stay.`, yes: "Delete", onYes: () => deleteWorkout(id) })}>Delete workout</button><//>`;
 }
 function SessionEditor({ s, draft, setDraft }) {
   const upd = fn => { fn(draft); setDraft({ ...draft }); };
   const exMap = {}; draft.items.forEach(it => { exMap[it.ex] = ex(it.ex); });
   const vol = PL.sessionVolume({ bw: +draft.bw || s.bw, items: draft.items.map(it => ({ ...it, sets: it.sets.filter(x => +x.r > 0).map(x => ({ ...x, done: true })) })) }, exMap);
-  const newXP = Math.round(vol * (s.rate ?? S.core.settings.rate)); const d = newXP - s.xp;
+  const LPL = s.lbPerLevel || S.core.settings.lbPerLevel; const d = vol - s.vol;
   return html`<${Sheet} title="Edit workout">
     <label class="l" for="ed-name" style="margin-top:0">Name</label><input id="ed-name" class="f" value=${draft.name} onInput=${e => upd(x => { x.name = e.target.value; })} />
     <label class="l" for="ed-bw">Bodyweight that day (lb)</label><input id="ed-bw" class="f num" inputmode="decimal" value=${draft.bw} onInput=${e => upd(x => { x.bw = e.target.value.replace(/[^0-9.]/g, ""); })} />
@@ -1059,7 +1074,7 @@ function SessionEditor({ s, draft, setDraft }) {
           <input class="cell" style="flex:1" inputmode="decimal" aria-label=${`${e.name} set ${i + 1} ${e.kind === "time" ? "seconds" : e.kind === "distance" ? "miles" : "reps"}`} value=${x.r} onInput=${ev => upd(() => { x.r = ev.target.value.replace(/[^0-9.]/g, ""); })} />
           <button class="btn sm danger" aria-label="Delete set" onClick=${() => upd(() => it.sets.splice(i, 1))}>✕</button></div>`)}
         <button class="btn sm" style="margin-top:8px" onClick=${() => upd(() => { const p = it.sets[it.sets.length - 1]; it.sets.push({ w: p ? p.w : "", r: p ? p.r : "", warm: false, done: true }); })}>+ Set</button></div>`; })}</div>
-    <div class="card small" style="margin-top:12px">New volume <b class="num">${fmtVol(vol)} lb</b> · XP <b class="num">${newXP.toLocaleString()}</b>${d ? html` <span style=${`color:${d > 0 ? "var(--ok)" : "var(--red)"}`} class="num">(${d > 0 ? "+" : "−"}${Math.abs(d).toLocaleString()})</span>` : ""}. Your Pokémon's XP adjusts to match.</div>
+    <div class="card small" style="margin-top:12px">New volume <b class="num">${fmtVol(vol)} lb</b> = <b class="num">${fmtLv(vol / LPL)}</b>${d ? html` <span style=${`color:${d > 0 ? "var(--ok)" : "var(--red)"}`} class="num">(${d > 0 ? "+" : "−"}${fmtVol(Math.abs(d))} lb)</span>` : ""}. Your Pokémon's XP adjusts to match.</div>
     <button class="btn pri wide" style="margin-top:12px" onClick=${() => saveEditedWorkout(s.id, draft)}>Save changes</button>
     <button class="btn wide" style="margin-top:8px" onClick=${() => setDraft(null)}>Cancel</button><//>`;
 }
@@ -1082,8 +1097,9 @@ function Settings() {
     <div class="row"><input id="set-bw" class="f num" inputmode="decimal" value=${bw} onInput=${e => setBw(e.target.value)} />
       <button class="btn" onClick=${() => { const n = parseFloat(bw); if (n > 0) { mutate(() => { st.bw = n; S.core.bwlog.push({ d: Date.now(), w: n }); }); toast("Bodyweight saved"); } }}>Save</button></div>
     <p class="tiny muted">Pull-ups count 100% of this per rep, push-ups 65%. Each workout uses the latest value.</p>
-    <label class="l" for="set-rate">XP per pound lifted</label><input id="set-rate" class="f num" inputmode="decimal" value=${st.rate} onChange=${e => num("rate", e.target.value)} />
-    <label class="l" for="set-share">Party XP share (%)</label><input id="set-share" class="f num" inputmode="numeric" value=${Math.round(st.share * 100)} onChange=${e => num("share", e.target.value, v => parseFloat(v) / 100)} />
+    <label class="l" for="set-lpl">Pounds lifted per level</label><input id="set-lpl" class="f num" inputmode="numeric" value=${st.lbPerLevel} onChange=${e => num("lbPerLevel", e.target.value, v => Math.max(1000, parseInt(String(v).replace(/\D/g, "")) || 20000))} />
+    <p class="tiny muted">Every ${st.lbPerLevel.toLocaleString()} lb you lift is worth 1 level to your active Pokémon, at any level. A ${fmtVol(st.lbPerLevel * .75)} lb workout = ¾ of a level. Changing this only affects future workouts.</p>
+    <label class="l" for="set-share">Party share (% of your pounds the rest of the party gets)</label><input id="set-share" class="f num" inputmode="numeric" value=${Math.round(st.share * 100)} onChange=${e => num("share", e.target.value, v => parseFloat(v) / 100)} />
     <label class="l" for="set-rest">Default rest timer (seconds)</label><input id="set-rest" class="f num" inputmode="numeric" value=${st.rest} onChange=${e => num("rest", e.target.value, v => parseInt(v))} />
     <h2 class="sec">Steps to hatch</h2>
     <div class="row">${["common","uncommon","rare"].map(t => html`<div class="grow"><label class="l" for=${"es-" + t} style="margin-top:0;text-transform:capitalize">${t}</label><input id=${"es-" + t} class="f num" inputmode="numeric" value=${st.eggSteps[t]} onChange=${e => mutate(() => { const n = parseInt(e.target.value); if (n > 0) st.eggSteps[t] = n; })} /></div>`)}</div>
@@ -1256,7 +1272,7 @@ function completeWorkout() {
   const exMap = {}; items.forEach(it => { exMap[it.ex] = ex(it.ex); });
   const sess = { id: a.id, tpl: a.tpl, sched: a.sched, name: a.name, start: a.start, end, bw: a.bw, items };
   sess.vol = PL.sessionVolume(sess, exMap);
-  sess.xp = Math.round(sess.vol * S.core.settings.rate);
+  const LPL = S.core.settings.lbPerLevel; sess.lbPerLevel = LPL;
   sess.prs = items.reduce((n, it) => n + it.sets.filter(s => s.pr).length, 0);
   sess.sets = items.reduce((n, it) => n + it.sets.length, 0);
   // template diff
@@ -1264,14 +1280,14 @@ function completeWorkout() {
   if (t) { const perf = items.map(it => it.ex); const orig = t.items.map(i => i.ex);
     diff = perf.join("|") !== orig.join("|") || items.some(it => { const ti = t.items.find(x => x.ex === it.ex); return ti && ti.sets && it.sets.filter(s => !s.warm).length !== ti.sets; }); }
   // game rewards
-  const g = G_(); const res = []; sess.rate = S.core.settings.rate; sess.awards = [];
+  const g = G_(); const res = []; sess.awards = []; sess.xp = 0;
   for (const uid of g.party) { const m = monOf(uid); if (!m) continue;
-    const frac = uid === g.active ? 1 : S.core.settings.share; const amt = Math.round(sess.xp * frac);
-    const before = { sp: m.sp, lv: m.lv }; const r = PL.awardXP(m, amt); res.push({ ...r, before, share: uid !== g.active }); queueGrowth(m, r);
-    sess.awards.push({ uid, frac, amt: r.gained }); }
+    const frac = uid === g.active ? 1 : S.core.settings.share; const lb = sess.vol * frac;
+    const before = { sp: m.sp, lv: m.lv }; const r = PL.awardXP(m, PL.lbToXP(m, lb, LPL)); res.push({ ...r, before, share: uid !== g.active, levels: lb / LPL }); queueGrowth(m, r);
+    sess.awards.push({ uid, frac, lb, amt: r.gained }); if (uid === g.active) sess.xp = r.gained; }
   S.sessions.push(sess); saveSession(sess);
   const n = sessionsDone(); const newBadges = [];
-  for (const ms of PL.MILESTONES) if (n >= ms.n && !g.badges[ms.id]) { g.badges[ms.id] = end; g.bank += ms.xp; g.bankLog.push({ d: end, amt: ms.xp, why: ms.name + " badge" }); newBadges.push(ms); }
+  for (const ms of PL.MILESTONES) if (n >= ms.n && !g.badges[ms.id]) { g.badges[ms.id] = end; g.bank += ms.lv; g.bankLog.push({ d: end, amt: ms.lv, why: ms.name + " badge" }); newBadges.push(ms); }
   saveCore();
   S.active = null; saveActive();
   U.finish = { sess, res, newBadges, diff: diff ? t.id : null };
@@ -1284,16 +1300,19 @@ function queueGrowth(m, r) {
 /* ---- editing / deleting past workouts: XP follows the change ---- */
 function sessionAwards(sess) {
   if (sess.awards) return sess.awards;
-  const g = G_(); return g.party.map(uid => { const frac = uid === g.active ? 1 : S.core.settings.share; return { uid, frac, amt: Math.round((sess.xp || 0) * frac) }; });
+  const g = G_(); return g.party.map(uid => { const frac = uid === g.active ? 1 : S.core.settings.share; return { uid, frac, lb: (sess.vol || 0) * frac, amt: Math.round((sess.xp || 0) * frac) }; });
 }
-function reapplyXP(sess, newXP) {
-  const out = []; sess.awards = sessionAwards(sess).map(a => ({ ...a }));
+/* newVol: the workout's corrected pounds (0 when deleting). More pounds adds XP at the Pokémon's current level;
+   fewer pounds takes back the same share of the XP it originally earned. */
+function reapplyXP(sess, newVol) {
+  const out = []; const LPL = sess.lbPerLevel || S.core.settings.lbPerLevel; sess.awards = sessionAwards(sess).map(a => ({ ...a }));
   for (const a of sess.awards) { const m = monOf(a.uid); if (!m) continue;
-    const delta = Math.round(newXP * a.frac) - a.amt; if (!delta) continue;
+    const newLb = newVol * a.frac; if (a.lb == null) a.lb = (sess.vol || 0) * a.frac; if (Math.abs(newLb - a.lb) < 0.5) continue;
     const lv0 = m.lv;
-    if (delta > 0) { const r = PL.awardXP(m, delta); a.amt += r.gained; queueGrowth(m, r); out.push({ m, d: r.gained, lv0 }); }
-    else { const rm = PL.removeXP(m, -delta); a.amt -= rm; out.push({ m, d: -rm, lv0 }); } }
-  sess.xp = newXP; return out;
+    if (newLb > a.lb) { const r = PL.awardXP(m, PL.lbToXP(m, newLb - a.lb, LPL)); a.amt += r.gained; queueGrowth(m, r); out.push({ m, d: r.gained, lv0 }); }
+    else { const take = a.lb > 0 ? Math.round(a.amt * (1 - newLb / a.lb)) : 0; const rm = PL.removeXP(m, take); a.amt -= rm; out.push({ m, d: -rm, lv0 }); }
+    a.lb = newLb; }
+  const act = sess.awards.find(a => a.frac === 1); sess.xp = act ? act.amt : 0; return out;
 }
 function xpSummary(out) {
   if (!out.length) return "No XP change";
@@ -1321,7 +1340,7 @@ function saveEditedWorkout(id, draft) {
   s.items = items; s.name = draft.name.trim() || s.name; s.bw = +draft.bw > 0 ? +draft.bw : s.bw;
   const exMap = {}; items.forEach(it => { exMap[it.ex] = ex(it.ex); });
   s.vol = PL.sessionVolume(s, exMap); s.sets = items.reduce((n, it) => n + it.sets.length, 0);
-  const out = reapplyXP(s, Math.round(s.vol * (s.rate ?? S.core.settings.rate)));
+  const out = reapplyXP(s, s.vol);
   saveSession(s); recomputeAllPRs(); saveCore(); closeAll();
   toast("Workout updated · " + xpSummary(out));
 }
@@ -1343,12 +1362,12 @@ function Finish() {
       <div class="row"><button class="btn sm pri" onClick=${() => { updateTemplateFrom(s, f.diff); setAsked(true); }}>Update template</button><button class="btn sm" onClick=${() => setAsked(true)}>Keep as one-time</button></div></div>`}
     <div class="stat-grid"><div class="tile"><div class="k">Time</div><div class="v">${fmtDur(s.end - s.start)}</div></div><div class="tile"><div class="k">Volume (lb)</div><div class="v">${fmtVol(s.vol)}</div></div><div class="tile"><div class="k">Sets</div><div class="v">${s.sets}</div></div></div>
     ${prs.length > 0 && html`<h2 class="sec">${prs.length} personal record${prs.length > 1 ? "s" : ""}</h2><div class="list">${prs.map(([e, x]) => html`<div class="li"><span class="tp" style="background:var(--pr)">PR</span><div class="grow b">${e.name}</div><span class="num">${setStr(e, x)}</span></div>`)}</div>`}
-    <h2 class="sec">+${s.xp.toLocaleString()} XP earned</h2>
+    <h2 class="sec">${fmtVol(s.vol)} lb lifted = ${fmtLv(s.vol / s.lbPerLevel)} for your active Pokémon</h2>
     <div class="list">${f.res.map(r => { const m = monOf(r.uid); if (!m) return null;
-      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${48} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${r.gained.toLocaleString()}${r.share ? " (share)" : ""}</span></div>
+      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${48} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${fmtLv(r.levels)}${r.share ? " (share)" : ""}</span></div>
         <div class="small muted num" style="margin:2px 0 5px">Lv ${r.from}${r.to > r.from ? html` → <b style="color:var(--ok)">Lv ${r.to}</b>` : ""}${r.learned.length ? " · learned " + r.learned.map(x => PL.move(x).n).join(", ") : ""}</div><${Bar} pct=${PL.xpProgress(m).pct} /></div></div>`; })}
       ${!f.res.length && html`<div class="empty small">No Pokémon in your party.</div>`}</div>
-    ${f.newBadges.map(b => html`<div class="card row" style="margin-top:12px"><span class="badge" style="background:var(--pr)">${b.n}</span><div class="grow"><div class="b">${b.name} badge</div><div class="small muted num">+${b.xp.toLocaleString()} XP added to your XP Bank</div></div></div>`)}
+    ${f.newBadges.map(b => html`<div class="card row" style="margin-top:12px"><span class="badge" style="background:var(--pr)">${b.n}</span><div class="grow"><div class="b">${b.name} badge</div><div class="small muted num">+${fmtLv(b.lv)} added to your XP Bank</div></div></div>`)}
     <button class="btn pri wide" style="margin-top:18px" onClick=${close}>${U.queue.length ? "Continue" : "Done"}</button>
   </div></div>`;
 }
@@ -1388,7 +1407,7 @@ function Team() {
   const seg = U.teamSeg || "party"; const setSeg = s => { U.teamSeg = s; go(); };
   const g = G_();
   return html`<div class="wrap">
-    <div class="top"><h1>Team</h1>${g.bank > 0 && html`<span class="chip num">Bank ${g.bank.toLocaleString()} XP</span>`}</div>
+    <div class="top"><h1>Team</h1>${g.bank > 0 && html`<span class="chip num">Bank ${fmtLv(g.bank)}</span>`}</div>
     <div class="seg" style="margin-bottom:14px">${[["party","Party"],["box","Box"],["eggs",`Eggs${g.eggs.length ? " " + g.eggs.length : ""}`],["dex","Pokédex"]].map(([k, l]) => html`<button class=${seg === k ? "on" : ""} onClick=${() => setSeg(k)}>${l}</button>`)}</div>
     ${seg === "party" ? html`<${Party} />` : seg === "box" ? html`<${Box} />` : seg === "eggs" ? html`<${Eggs} />` : html`<${Dex} />`}
   </div>`;
@@ -1432,7 +1451,7 @@ function MonSheet({ uid }) {
     ${evo.length > 0 && html`<div class="small muted" style="margin-top:8px">${evo.length > 1 ? `Evolves at Lv ${evo[0].lv} into your choice of ${evo.map(e => PL.mon(e.to).n).join(", ")}` : `Evolves at Lv ${evo[0].lv} into ${PL.mon(evo[0].to).n}`}${m.evoNo != null && m.lv >= evo[0].lv ? " · asks again next level-up" : ""}</div>`}
     <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:14px">
       ${inParty && g.active !== uid && html`<button class="btn sm pri" onClick=${() => { mutate(() => { g.active = uid; }); toast(`${monName(m)} is now active`); }}>Make active</button>`}
-      ${g.bank > 0 && m.lv < 100 && html`<button class="btn sm" onClick=${() => openSheet(GiveXP, { uid })}>Give bank XP</button>`}
+      ${g.bank > 0 && m.lv < 100 && html`<button class="btn sm" onClick=${() => openSheet(GiveXP, { uid })}>Give bank levels</button>`}
       <button class="btn sm" onClick=${() => openSheet(RenameSheet, { value: m.nick || sp.n, onSave: v => mutate(() => { m.nick = v === sp.n ? "" : v; }) })}>Nickname</button>
       ${inParty && idx > 0 && html`<button class="btn sm" onClick=${() => mutate(() => { g.party.splice(idx, 1); g.party.splice(idx - 1, 0, uid); })}>Move up</button>`}
       ${inParty ? (g.party.length > 1 && html`<button class="btn sm" onClick=${() => { mutate(() => { g.party.splice(idx, 1); if (g.active === uid) g.active = g.party[0]; }); closeSheet(); toast("Moved to box"); }}>Send to box</button>`)
@@ -1446,14 +1465,15 @@ function MonSheet({ uid }) {
 }
 function GiveXP({ uid }) {
   const g = G_(); const m = monOf(uid); const p = PL.xpProgress(m);
-  const [v, setV] = useState(String(Math.min(g.bank, p.toNext)));
-  const give = () => { const n = Math.min(g.bank, Math.max(0, parseInt(v) || 0)); if (!n) return;
-    const r = PL.awardXP(m, n); g.bank -= r.gained; g.bankLog.push({ d: Date.now(), amt: -r.gained, why: "Gave to " + monName(m) });
+  const toNext = Math.round((1 - p.pct) * 100) / 100;
+  const [v, setV] = useState(String(Math.min(g.bank, toNext)));
+  const give = () => { const n = Math.min(g.bank, Math.max(0, parseFloat(v) || 0)); if (!n) return;
+    const r = PL.awardXP(m, PL.levelsToXP(m, n)); g.bank = Math.round((g.bank - n) * 100) / 100; g.bankLog.push({ d: Date.now(), amt: -n, why: "Gave to " + monName(m) });
     queueGrowth(m, r); saveCore(); closeAll(); toast(r.to > r.from ? `${monName(m)} grew to Lv ${r.to}!` : `+${r.gained.toLocaleString()} XP`); };
-  return html`<${Sheet} title=${"Give XP to " + monName(m)}><div class="small muted" style="margin-top:-6px">Bank balance ${g.bank.toLocaleString()} XP. This can't be undone.</div>
-    <label class="l" for="gx">Amount</label><input id="gx" class="f num" inputmode="numeric" value=${v} onInput=${e => setV(e.target.value.replace(/\D/g, ""))} />
-    <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm" onClick=${() => setV(String(Math.min(g.bank, p.toNext)))}>To Lv ${m.lv + 1}</button><button class="btn sm" onClick=${() => setV(String(g.bank))}>All</button></div>
-    <button class="btn pri wide" style="margin-top:14px" onClick=${give}>Give XP</button><//>`;
+  return html`<${Sheet} title=${"Give levels to " + monName(m)}><div class="small muted" style="margin-top:-6px">Bank balance ${fmtLv(g.bank)}. This can't be undone.</div>
+    <label class="l" for="gx">Levels to give</label><input id="gx" class="f num" inputmode="decimal" value=${v} onInput=${e => setV(e.target.value.replace(/[^0-9.]/g, ""))} />
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm" onClick=${() => setV(String(Math.min(g.bank, toNext)))}>To Lv ${m.lv + 1}</button><button class="btn sm" onClick=${() => setV(String(g.bank))}>All</button></div>
+    <button class="btn pri wide" style="margin-top:14px" onClick=${give}>Give levels</button><//>`;
 }
 function Eggs() {
   const g = G_(); const egg = g.eggs.find(e => e.id === g.incub);
@@ -1496,7 +1516,7 @@ function Gyms() {
 function GymSheet({ i }) {
   const gy = PL.GYMS[i]; const g = G_();
   return html`<${Sheet} title=${gy.name}>
-    <div class="small muted" style="margin:-8px 0 12px">${gy.type}-type gym · ${gy.badge} Badge · first leader win adds ${gy.xp.toLocaleString()} XP to your bank</div>
+    <div class="small muted" style="margin:-8px 0 12px">${gy.type}-type gym · ${gy.badge} Badge · first leader win adds ${fmtLv(gy.lv)} to your XP Bank</div>
     <div class="stack">${gy.ladder.map((o, j) => { const open = oppUnlocked(i, j); const wins = g.beaten[i + "-" + j] || 0; const tier = PL.TIER[o.tier];
       return html`<div class="card" style=${open ? "" : "opacity:.55"}>
         <div class="row"><div class="grow"><div class="b">${o.cls}</div><div class="small muted">${tier.label} · reward: ${PL.EGG[tier.egg].label.toLowerCase()}${wins ? ` · beaten ×${wins}` : ""}</div></div>
@@ -1534,7 +1554,7 @@ function rewardBattle() {
     const egg = { id: PL.uid(), tier, steps: 0, need: S.core.settings.eggSteps[tier], from: opp.cls };
     const key = B.gymIdx + "-" + B.oppIdx; const first = !g.beaten[key];
     mutate(() => { g.eggs.push(egg); if (!g.incub) g.incub = egg.id; g.beaten[key] = (g.beaten[key] || 0) + 1;
-      if (opp.tier === "leader" && !g.badges["g" + B.gymIdx]) { g.badges["g" + B.gymIdx] = Date.now(); g.bank += gy.xp; g.bankLog.push({ d: Date.now(), amt: gy.xp, why: gy.badge + " Badge" }); bt.badge = true; } });
+      if (opp.tier === "leader" && !g.badges["g" + B.gymIdx]) { g.badges["g" + B.gymIdx] = Date.now(); g.bank += gy.lv; g.bankLog.push({ d: Date.now(), amt: gy.lv, why: gy.badge + " Badge" }); bt.badge = true; } });
     bt.reward = { egg, first };
   } else bt.insight = PL.lossInsight(B);
 }
@@ -1571,7 +1591,7 @@ function Battle() {
     ${bt.phase === "over" && html`<div class="card" style="margin-top:12px">${B.over === "win" ? html`
         <div class="b" style="font-size:18px">You won!</div>
         ${bt.reward && html`<div class="row" style="margin-top:10px"><${Egg} tier=${bt.reward.egg.tier} /><div class="grow small">You got a <b>${PL.EGG[bt.reward.egg.tier].label.toLowerCase()}</b>. Hatches in ${bt.reward.egg.need.toLocaleString()} steps.</div></div>`}
-        ${bt.badge && html`<div class="row" style="margin-top:10px"><span class="badge" style=${`background:${TYPE_COL[PL.GYMS[B.gymIdx].type]}`}>${PL.GYMS[B.gymIdx].badge.slice(0, 2)}</span><div class="grow small">You earned the <b>${PL.GYMS[B.gymIdx].badge} Badge</b> and ${PL.GYMS[B.gymIdx].xp.toLocaleString()} XP for your bank.${B.gymIdx < 7 ? ` ${PL.GYMS[B.gymIdx + 1].name} is now open.` : ""}</div></div>`}`
+        ${bt.badge && html`<div class="row" style="margin-top:10px"><span class="badge" style=${`background:${TYPE_COL[PL.GYMS[B.gymIdx].type]}`}>${PL.GYMS[B.gymIdx].badge.slice(0, 2)}</span><div class="grow small">You earned the <b>${PL.GYMS[B.gymIdx].badge} Badge</b> and ${fmtLv(PL.GYMS[B.gymIdx].lv)} for your XP Bank.${B.gymIdx < 7 ? ` ${PL.GYMS[B.gymIdx + 1].name} is now open.` : ""}</div></div>`}`
       : html`<div class="b" style="font-size:18px">Not this time.</div><div class="small muted" style="margin:4px 0 10px">${bt.insight || ""} Train, level up, and try again.</div>
         <div class="row" style="gap:8px;flex-wrap:wrap">${B.theirs.map(m => html`<div class="center"><${Sprite} sp=${m.sp} size=${44} /><div class="tiny muted num">Lv ${m.lv}</div></div>`)}</div>`}
       <button class="btn pri wide" style="margin-top:12px" onClick=${exit}>Done</button></div>`}

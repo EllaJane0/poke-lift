@@ -158,7 +158,7 @@ function completeWorkout() {
   const exMap = {}; items.forEach(it => { exMap[it.ex] = ex(it.ex); });
   const sess = { id: a.id, tpl: a.tpl, sched: a.sched, name: a.name, start: a.start, end, bw: a.bw, items };
   sess.vol = PL.sessionVolume(sess, exMap);
-  sess.xp = Math.round(sess.vol * S.core.settings.rate);
+  const LPL = S.core.settings.lbPerLevel; sess.lbPerLevel = LPL;
   sess.prs = items.reduce((n, it) => n + it.sets.filter(s => s.pr).length, 0);
   sess.sets = items.reduce((n, it) => n + it.sets.length, 0);
   // template diff
@@ -166,14 +166,14 @@ function completeWorkout() {
   if (t) { const perf = items.map(it => it.ex); const orig = t.items.map(i => i.ex);
     diff = perf.join("|") !== orig.join("|") || items.some(it => { const ti = t.items.find(x => x.ex === it.ex); return ti && ti.sets && it.sets.filter(s => !s.warm).length !== ti.sets; }); }
   // game rewards
-  const g = G_(); const res = []; sess.rate = S.core.settings.rate; sess.awards = [];
+  const g = G_(); const res = []; sess.awards = []; sess.xp = 0;
   for (const uid of g.party) { const m = monOf(uid); if (!m) continue;
-    const frac = uid === g.active ? 1 : S.core.settings.share; const amt = Math.round(sess.xp * frac);
-    const before = { sp: m.sp, lv: m.lv }; const r = PL.awardXP(m, amt); res.push({ ...r, before, share: uid !== g.active }); queueGrowth(m, r);
-    sess.awards.push({ uid, frac, amt: r.gained }); }
+    const frac = uid === g.active ? 1 : S.core.settings.share; const lb = sess.vol * frac;
+    const before = { sp: m.sp, lv: m.lv }; const r = PL.awardXP(m, PL.lbToXP(m, lb, LPL)); res.push({ ...r, before, share: uid !== g.active, levels: lb / LPL }); queueGrowth(m, r);
+    sess.awards.push({ uid, frac, lb, amt: r.gained }); if (uid === g.active) sess.xp = r.gained; }
   S.sessions.push(sess); saveSession(sess);
   const n = sessionsDone(); const newBadges = [];
-  for (const ms of PL.MILESTONES) if (n >= ms.n && !g.badges[ms.id]) { g.badges[ms.id] = end; g.bank += ms.xp; g.bankLog.push({ d: end, amt: ms.xp, why: ms.name + " badge" }); newBadges.push(ms); }
+  for (const ms of PL.MILESTONES) if (n >= ms.n && !g.badges[ms.id]) { g.badges[ms.id] = end; g.bank += ms.lv; g.bankLog.push({ d: end, amt: ms.lv, why: ms.name + " badge" }); newBadges.push(ms); }
   saveCore();
   S.active = null; saveActive();
   U.finish = { sess, res, newBadges, diff: diff ? t.id : null };
@@ -186,16 +186,19 @@ function queueGrowth(m, r) {
 /* ---- editing / deleting past workouts: XP follows the change ---- */
 function sessionAwards(sess) {
   if (sess.awards) return sess.awards;
-  const g = G_(); return g.party.map(uid => { const frac = uid === g.active ? 1 : S.core.settings.share; return { uid, frac, amt: Math.round((sess.xp || 0) * frac) }; });
+  const g = G_(); return g.party.map(uid => { const frac = uid === g.active ? 1 : S.core.settings.share; return { uid, frac, lb: (sess.vol || 0) * frac, amt: Math.round((sess.xp || 0) * frac) }; });
 }
-function reapplyXP(sess, newXP) {
-  const out = []; sess.awards = sessionAwards(sess).map(a => ({ ...a }));
+/* newVol: the workout's corrected pounds (0 when deleting). More pounds adds XP at the Pokémon's current level;
+   fewer pounds takes back the same share of the XP it originally earned. */
+function reapplyXP(sess, newVol) {
+  const out = []; const LPL = sess.lbPerLevel || S.core.settings.lbPerLevel; sess.awards = sessionAwards(sess).map(a => ({ ...a }));
   for (const a of sess.awards) { const m = monOf(a.uid); if (!m) continue;
-    const delta = Math.round(newXP * a.frac) - a.amt; if (!delta) continue;
+    const newLb = newVol * a.frac; if (a.lb == null) a.lb = (sess.vol || 0) * a.frac; if (Math.abs(newLb - a.lb) < 0.5) continue;
     const lv0 = m.lv;
-    if (delta > 0) { const r = PL.awardXP(m, delta); a.amt += r.gained; queueGrowth(m, r); out.push({ m, d: r.gained, lv0 }); }
-    else { const rm = PL.removeXP(m, -delta); a.amt -= rm; out.push({ m, d: -rm, lv0 }); } }
-  sess.xp = newXP; return out;
+    if (newLb > a.lb) { const r = PL.awardXP(m, PL.lbToXP(m, newLb - a.lb, LPL)); a.amt += r.gained; queueGrowth(m, r); out.push({ m, d: r.gained, lv0 }); }
+    else { const take = a.lb > 0 ? Math.round(a.amt * (1 - newLb / a.lb)) : 0; const rm = PL.removeXP(m, take); a.amt -= rm; out.push({ m, d: -rm, lv0 }); }
+    a.lb = newLb; }
+  const act = sess.awards.find(a => a.frac === 1); sess.xp = act ? act.amt : 0; return out;
 }
 function xpSummary(out) {
   if (!out.length) return "No XP change";
@@ -223,7 +226,7 @@ function saveEditedWorkout(id, draft) {
   s.items = items; s.name = draft.name.trim() || s.name; s.bw = +draft.bw > 0 ? +draft.bw : s.bw;
   const exMap = {}; items.forEach(it => { exMap[it.ex] = ex(it.ex); });
   s.vol = PL.sessionVolume(s, exMap); s.sets = items.reduce((n, it) => n + it.sets.length, 0);
-  const out = reapplyXP(s, Math.round(s.vol * (s.rate ?? S.core.settings.rate)));
+  const out = reapplyXP(s, s.vol);
   saveSession(s); recomputeAllPRs(); saveCore(); closeAll();
   toast("Workout updated · " + xpSummary(out));
 }
@@ -245,12 +248,12 @@ function Finish() {
       <div class="row"><button class="btn sm pri" onClick=${() => { updateTemplateFrom(s, f.diff); setAsked(true); }}>Update template</button><button class="btn sm" onClick=${() => setAsked(true)}>Keep as one-time</button></div></div>`}
     <div class="stat-grid"><div class="tile"><div class="k">Time</div><div class="v">${fmtDur(s.end - s.start)}</div></div><div class="tile"><div class="k">Volume (lb)</div><div class="v">${fmtVol(s.vol)}</div></div><div class="tile"><div class="k">Sets</div><div class="v">${s.sets}</div></div></div>
     ${prs.length > 0 && html`<h2 class="sec">${prs.length} personal record${prs.length > 1 ? "s" : ""}</h2><div class="list">${prs.map(([e, x]) => html`<div class="li"><span class="tp" style="background:var(--pr)">PR</span><div class="grow b">${e.name}</div><span class="num">${setStr(e, x)}</span></div>`)}</div>`}
-    <h2 class="sec">+${s.xp.toLocaleString()} XP earned</h2>
+    <h2 class="sec">${fmtVol(s.vol)} lb lifted = ${fmtLv(s.vol / s.lbPerLevel)} for your active Pokémon</h2>
     <div class="list">${f.res.map(r => { const m = monOf(r.uid); if (!m) return null;
-      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${48} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${r.gained.toLocaleString()}${r.share ? " (share)" : ""}</span></div>
+      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${48} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${fmtLv(r.levels)}${r.share ? " (share)" : ""}</span></div>
         <div class="small muted num" style="margin:2px 0 5px">Lv ${r.from}${r.to > r.from ? html` → <b style="color:var(--ok)">Lv ${r.to}</b>` : ""}${r.learned.length ? " · learned " + r.learned.map(x => PL.move(x).n).join(", ") : ""}</div><${Bar} pct=${PL.xpProgress(m).pct} /></div></div>`; })}
       ${!f.res.length && html`<div class="empty small">No Pokémon in your party.</div>`}</div>
-    ${f.newBadges.map(b => html`<div class="card row" style="margin-top:12px"><span class="badge" style="background:var(--pr)">${b.n}</span><div class="grow"><div class="b">${b.name} badge</div><div class="small muted num">+${b.xp.toLocaleString()} XP added to your XP Bank</div></div></div>`)}
+    ${f.newBadges.map(b => html`<div class="card row" style="margin-top:12px"><span class="badge" style="background:var(--pr)">${b.n}</span><div class="grow"><div class="b">${b.name} badge</div><div class="small muted num">+${fmtLv(b.lv)} added to your XP Bank</div></div></div>`)}
     <button class="btn pri wide" style="margin-top:18px" onClick=${close}>${U.queue.length ? "Continue" : "Done"}</button>
   </div></div>`;
 }

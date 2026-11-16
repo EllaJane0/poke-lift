@@ -4,6 +4,10 @@ A personal workout tracker where the weight you lift levels up a team of Gen 1 P
 
 Personal, non-commercial fan project. Pokémon is © Nintendo / Game Freak / The Pokémon Company. Game data and sprites come from [PokéAPI](https://pokeapi.co).
 
+## How XP works
+
+Every 20,000 lb you lift (weight × reps, with bodyweight counted for pull-ups and push-ups) is worth 1 level to your active Pokémon, at any level. Heavier workouts earn proportionally more. The rest of the party gets a share of your pounds. Gym badges and session milestones put whole levels into the XP Bank. The pounds-per-level number is adjustable in Settings.
+
 ## Accounts and data
 
 Each person signs in with their email and a one-time code. Their workouts, templates, calendar, Pokémon, eggs, and badges are stored in Supabase under their account, protected by row-level security so nobody can read anyone else's data. The app also keeps a copy on the device, so it opens instantly, works offline at the gym, and syncs when it's back online.

@@ -26,7 +26,7 @@ function defaultCore() {
   const it = (ex, sets, reps) => ({ ex, sets, reps });
   return {
     v: 1, updated: Date.now(),
-    settings: { rate: 0.2, share: 0.5, bw: 180, rest: 90, eggSteps: { common: 5000, uncommon: 10000, rare: 20000 } },
+    settings: { lbPerLevel: 20000, share: 0.5, bw: 180, rest: 90, eggSteps: { common: 5000, uncommon: 10000, rare: 20000 } },
     bwlog: [], exercises,
     templates: [
       { id: PL.uid(), name: "Push", items: [it("barbell-bench-press",4,8), it("overhead-press",3,8), it("incline-dumbbell-press",3,10), it("lateral-raise",3,12), it("tricep-pushdown",3,12), it("push-up",2,15)] },
@@ -34,7 +34,7 @@ function defaultCore() {
       { id: PL.uid(), name: "Legs", items: [it("back-squat",4,6), it("romanian-deadlift",3,8), it("leg-press",3,10), it("leg-curl",3,12), it("standing-calf-raise",4,12)] },
     ],
     sched: {},
-    game: { started: false, mons: {}, party: [], active: null, bank: 0, bankLog: [], badges: {}, beaten: {}, eggs: [], incub: null, steps: 0, dex: [] },
+    game: { started: false, mons: {}, party: [], active: null, bank: 0, bankLv: true, bankLog: [], badges: {}, beaten: {}, eggs: [], incub: null, steps: 0, dex: [] },
   };
 }
 
@@ -43,7 +43,10 @@ const CFG = window.PL_CONFIG || {};
 const MODE = CFG.supabaseUrl && CFG.supabaseKey && window.supabase ? "cloud" : "local";
 let NS = "pl.";
 const S = { core: null, sessions: [], active: null, sync: "device", hist: null, auth: { state: MODE === "cloud" ? "loading" : "none", email: "", uid: null } };
-function loadLocal() { S.core = LS.get(NS + "core") || defaultCore(); S.sessions = LS.get(NS + "sessions") || []; S.active = LS.get(NS + "active"); S.hist = null; }
+function loadLocal() { S.core = migrate(LS.get(NS + "core") || defaultCore()); S.sessions = LS.get(NS + "sessions") || []; S.active = LS.get(NS + "active"); S.hist = null; }
+/* v2: XP comes from pounds-per-level; the XP Bank holds levels instead of raw XP */
+function migrate(c) { if (!c) return c; const st = c.settings || (c.settings = {}); if (!st.lbPerLevel) st.lbPerLevel = 20000; delete st.rate;
+  const g = c.game; if (g && !g.bankLv) { g.bank = Math.round(((g.bank || 0) / 1500) * 10) / 10; g.bankLv = true; } return c; }
 if (MODE !== "cloud") loadLocal();
 let rerender = () => {};
 const setRerender = f => { rerender = f; };
@@ -107,7 +110,7 @@ function history() { if (!S.hist) S.hist = PL.buildHistory(S.sessions); return S
 /* merge a remote snapshot into local state: newer core/active wins, sessions are unioned */
 function mergeRemote(remCore, remSessions, remActive) {
   const local = LS.get(NS + "core");
-  if (remCore) { if (!local || (remCore.updated || 0) >= (local.updated || 0)) S.core = JSON.parse(JSON.stringify(remCore)); else put("main", remote.core()); }
+  if (remCore) { if (!local || (remCore.updated || 0) >= (local.updated || 0)) S.core = migrate(JSON.parse(JSON.stringify(remCore))); else put("main", remote.core()); }
   else if (local && local.game && local.game.started) put("main", remote.core());
   const merged = {}; remSessions.forEach(x => { merged[x.id] = JSON.parse(JSON.stringify(x)); });
   for (const s of S.sessions) if (!merged[s.id]) { merged[s.id] = s; put("s:" + s.id, remote.session(s)); }
@@ -195,6 +198,7 @@ function addMon(m) {
   if (!g.active) g.active = m.uid;
 }
 function sessionsDone() { return S.sessions.length; }
+function fmtLv(n) { const r = Math.round(n * 100) / 100; return `${r} level${r === 1 ? "" : "s"}`; }
 function fmtVol(v) { return v >= 10000 ? (v / 1000).toFixed(1).replace(/\.0$/, "") + "k" : Math.round(v).toLocaleString(); }
 function fmtDur(ms) { const s = Math.max(0, Math.floor(ms / 1000)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${m}:${pad(x)}`; }
 function fmtDate(t, opts = { weekday: "short", month: "short", day: "numeric" }) { return new Date(t).toLocaleDateString(undefined, opts); }
