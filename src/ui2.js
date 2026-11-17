@@ -250,9 +250,10 @@ function Finish() {
     ${prs.length > 0 && html`<h2 class="sec">${prs.length} personal record${prs.length > 1 ? "s" : ""}</h2><div class="list">${prs.map(([e, x]) => html`<div class="li"><span class="tp" style="background:var(--pr)">PR</span><div class="grow b">${e.name}</div><span class="num">${setStr(e, x)}</span></div>`)}</div>`}
     <h2 class="sec">${fmtVol(s.vol)} lb lifted = ${fmtLv(s.vol / s.lbPerLevel)} for your active Pokémon</h2>
     <div class="list">${f.res.map(r => { const m = monOf(r.uid); if (!m) return null;
-      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${48} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${fmtLv(r.levels)}${r.share ? " (share)" : ""}</span></div>
+      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${48} shiny=${m.shiny} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${fmtLv(r.levels)}${r.share ? " (share)" : ""}</span></div>
         <div class="small muted num" style="margin:2px 0 5px">Lv ${r.from}${r.to > r.from ? html` → <b style="color:var(--ok)">Lv ${r.to}</b>` : ""}${r.learned.length ? " · learned " + r.learned.map(x => PL.move(x).n).join(", ") : ""}</div><${Bar} pct=${PL.xpProgress(m).pct} /></div></div>`; })}
       ${!f.res.length && html`<div class="empty small">No Pokémon in your party.</div>`}</div>
+    ${s.prs > 0 && html`<div class="card small row" style="margin-top:12px"><span class="shiny-tag" style="font-size:18px">✦</span><div class="grow">${s.prs} PR${s.prs > 1 ? "s" : ""} raised your shiny chance to <b class="num">${(PL.shinyChance(prsSince(W_().shinyAt)) * 100).toFixed(2)}%</b> for your next encounter.</div></div>`}
     ${f.newBadges.map(b => html`<div class="card row" style="margin-top:12px"><span class="badge" style="background:var(--pr)">${b.n}</span><div class="grow"><div class="b">${b.name} badge</div><div class="small muted num">+${fmtLv(b.lv)} added to your XP Bank</div></div></div>`)}
     <button class="btn pri wide" style="margin-top:18px" onClick=${close}>${U.queue.length ? "Continue" : "Done"}</button>
   </div></div>`;
@@ -261,6 +262,7 @@ function Finish() {
 /* ---------------- growth prompts (learn move / evolve) ---------------- */
 function PromptLayer() {
   if (U.layer === "finish" || U.layer === "battle" || U.sheets.length) return null;
+  if (G_().started && W_().pending.length) return html`<${EncounterPrompt} />`;
   const q = U.queue[0]; if (!q) return null;
   const m = monOf(q.uid); if (!m && q.k !== "msg") { U.queue.shift(); setTimeout(go); return null; }
   const next = () => { U.queue.shift(); saveCore(); go(); };
@@ -281,7 +283,7 @@ function PromptLayer() {
       if (PL.evoOptions(m).length) U.queue.splice(1 + extra.length, 0, { k: "evo", uid: m.uid });
       if (nickless) {} saveCore(); go(); };
     body = html`<div class="center"><${Sprite} sp=${m.sp} size=${120} /><h3>What? ${monName(m)} is evolving!</h3>
-      <p class="muted small">${opts[0].how === "stone" ? "Normally a stone evolution, here it happens at Lv 30." : opts[0].how === "trade" ? "Normally a trade evolution, here it happens at Lv 40." : ""}</p></div>
+      <p class="muted small">${opts[0].how === "stone" ? `In the games this needs an evolution stone. Here it happens at Lv ${opts[0].lv}.` : opts[0].how === "trade" ? `In the games this needs a trade. Here it happens at Lv ${opts[0].lv}.` : ""}</p></div>
       ${opts.length > 1 ? html`<div class="small muted center" style="margin-bottom:8px">Choose its evolution:</div><div class="row" style="gap:8px">${opts.map(o => html`<button class="card grow center" onClick=${() => doEvo(o.to)}><${Sprite} sp=${o.to} size=${64} /><div class="b small">${PL.mon(o.to).n}</div></button>`)}</div>`
         : html`<button class="btn pri wide" onClick=${() => doEvo(opts[0].to)}>Evolve into ${PL.mon(opts[0].to).n}</button>`}
       <button class="btn wide" style="margin-top:10px" onClick=${() => { m.evoNo = m.lv; next(); }}>Stop evolution</button>`; }

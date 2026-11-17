@@ -27,6 +27,12 @@ const PHYS = new Set(["Normal","Fighting","Flying","Poison","Ground","Rock","Bug
 const mon = id => G.mons[id];
 const move = id => G.moves[id] || EXTRA[id];
 const EXTRA = { struggle: { n:"Struggle", id:"struggle", t:"Typeless", p:50, pp:1, a:0, pr:0, tg:10, c:0, ail:0, ac:0, hi:[0,0], dr:-25, hl:0, cr:0, fc:0, sc:0, st:[] } };
+/* Evolutions that need a stone or a trade in the games happen at these levels instead
+   (chosen from where each line sits: single-stage Pokémon earlier, already-evolved ones later). */
+const ITEM_EVO_LV = { Raichu:28, Clefable:32, Wigglytuff:32, Ninetales:32, Arcanine:34, Cloyster:32, Starmie:32, Exeggutor:32,
+  Vileplume:36, Victreebel:36, Poliwrath:38, Nidoqueen:36, Nidoking:36, Vaporeon:25, Jolteon:25, Flareon:25,
+  Alakazam:38, Gengar:38, Machamp:40, Golem:40 };
+for (const m of Object.values(G.mons)) for (const e of m.e) if (e.how !== "level") { const L = ITEM_EVO_LV[G.mons[e.to].n]; if (L) e.lv = L; }
 const byName = {}; Object.entries(G.mons).forEach(([k, m]) => { byName[m.n.toLowerCase()] = +k; });
 const sid = n => { const v = byName[n.toLowerCase()]; if (!v) throw new Error("species " + n); return v; };
 const GROW = { fast:n=>Math.floor(4*n**3/5), mf:n=>n**3, ms:n=>Math.floor(6*n**3/5-15*n*n+100*n-140), slow:n=>Math.floor(5*n**3/4) };
@@ -164,6 +170,52 @@ const POOLS = {
   uncommon: "Pikachu,Clefairy,Jigglypuff,Vulpix,Growlithe,Abra,Machop,Ponyta,Slowpoke,Seel,Grimer,Gastly,Onix,Drowzee,Exeggcute,Cubone,Koffing,Rhyhorn,Tangela,Staryu,Farfetch'd,Lickitung,Hitmonlee,Hitmonchan,Mr. Mime,Jynx,Electabuzz,Magmar,Pinsir".split(",").map(sid),
   rare: "Bulbasaur,Charmander,Squirtle,Eevee,Dratini,Lapras,Snorlax,Scyther,Kangaskhan,Chansey,Tauros,Porygon,Omanyte,Kabuto,Aerodactyl,Ditto".split(",").map(sid),
 };
+/* ---------- walking: daily 10k encounters, streak tiers, shinies ---------- */
+const STEP_GOAL = 10000;
+const STREAK_TIERS = [ // reached at this many streak days; odds of each pool
+  { at: 0, label: "Tier 1", odds: { common: 1 } },
+  { at: 3, label: "Tier 2", odds: { common: .7, uncommon: .3 } },
+  { at: 7, label: "Tier 3", odds: { common: .5, uncommon: .35, rare: .15 } },
+];
+const tierOf = s => { let t = 0; STREAK_TIERS.forEach((x, i) => { if (s >= x.at) t = i; }); return t; };
+const dropTier = s => { const t = tierOf(s); return t === 0 ? 0 : STREAK_TIERS[t - 1].at; };
+const addDay = (k, n) => { const [y, m, d] = k.split("-").map(Number); const x = new Date(y, m - 1, d + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+/* Replays every day from `start` to `today`: a 10k day adds 1 to the streak; a finished day under 10k drops one tier.
+   Today only counts once it reaches 10k (it can't be missed until it's over). */
+function walkStreak(days, start, today) {
+  let s = 0; const byDay = {};
+  if (!start) return { s, byDay };
+  for (let d = start; d <= today; d = addDay(d, 1)) {
+    const n = days[d] || 0;
+    if (n >= STEP_GOAL) s += 1; else if (d < today) s = dropTier(s);
+    byDay[d] = s;
+  }
+  return { s, byDay };
+}
+const SHINY_BASE = 0.02, SHINY_PER_PR = 0.0025, SHINY_MAX = 0.25;
+const shinyChance = prs => Math.min(SHINY_MAX, SHINY_BASE + SHINY_PER_PR * Math.max(0, prs));
+/* Wild level: 70–90% of the average of your three highest-level Pokémon (at least 5).
+   The species is drawn from the pool, then evolves as far as that level allows. */
+function encounterLevel(levels, rng = Math.random) {
+  const top = [...levels].sort((a, b) => b - a).slice(0, 3);
+  const avg = top.length ? top.reduce((a, b) => a + b, 0) / top.length : 5;
+  return Math.max(5, Math.min(100, Math.round(avg * (0.7 + rng() * 0.2))));
+}
+function evolveTo(sp, lv, rng = Math.random) {
+  for (let guard = 0; guard < 3; guard++) { const e = mon(sp).e.filter(x => x.lv <= lv); if (!e.length) break; sp = e[Math.floor(rng() * e.length)].to; }
+  return sp;
+}
+function rollEncounter({ streak, levels, prs, pool: forced }, rng = Math.random) {
+  const odds = STREAK_TIERS[tierOf(streak || 0)].odds; let r = rng(), pool = forced || "common";
+  if (!forced) for (const k of ["rare", "uncommon", "common"]) { if (!odds[k]) continue; if (r < odds[k]) { pool = k; break; } r -= odds[k]; }
+  const base = POOLS[pool][Math.floor(rng() * POOLS[pool].length)];
+  const lv = encounterLevel(levels, rng);
+  const sp = evolveTo(base, lv, rng);
+  const m = newMon(sp, lv); m.shiny = rng() < shinyChance(prs); m.pool = pool; m.wild = true;
+  return m;
+}
+const TRAINER_LV = { easy: 0.2, medium: 0.3, hard: 0.5, leader: 0.75 }; // levels for a first win
+
 const EGG = { common:{ label:"Common egg", steps:5000 }, uncommon:{ label:"Uncommon egg", steps:10000 }, rare:{ label:"Rare egg", steps:20000 } };
 const MILESTONES = [ { id:"s10", n:10, name:"10 Sessions", lv:2 }, { id:"s25", n:25, name:"25 Sessions", lv:4 }, { id:"s50", n:50, name:"50 Sessions", lv:6 }, { id:"s100", n:100, name:"100 Sessions", lv:10 } ];
 
@@ -180,7 +232,7 @@ const STATUSN = { par:"paralyzed", slp:"asleep", frz:"frozen", brn:"burned", psn
 
 function battler(src, side) {
   const st = calcStats(src.sp, src.lv, src.iv);
-  return { side, uid: src.uid || uid(), sp: src.sp, name: src.nick || mon(src.sp).n, lv: src.lv, types: mon(src.sp).t.slice(),
+  return { side, uid: src.uid || uid(), sp: src.sp, shiny: !!src.shiny, name: src.nick || mon(src.sp).n, lv: src.lv, types: mon(src.sp).t.slice(),
     st, maxhp: st[0], hp: st[0], moves: src.moves.map(id => ({ id, pp: move(id).pp })), status: null, slp: 0,
     stg: { atk:0, def:0, spa:0, spd:0, spe:0, acc:0, eva:0 }, conf: 0, seeded: false, charging: null, recharge: false, focus: false, fainted: false };
 }
@@ -397,5 +449,5 @@ function lossInsight(B) {
 
 return { G, TYPES, TC, eff, mon, move, sid, expFor, growthName, calcStats, movesAt, newMon, randIV, uid, awardXP, removeXP, levelsToXP, lbToXP, evoOptions, evolve, relearnable, xpProgress,
   setLoad, sessionVolume, e1rm, buildHistory, lastFor, isPR, priorSetsFor,
-  GYMS, TIER, POOLS, EGG, MILESTONES, newBattle, runTurn, aiChoose, doSwitch, effSpe, estDamage, lossInsight, battler };
+  GYMS, TIER, POOLS, EGG, MILESTONES, STEP_GOAL, STREAK_TIERS, tierOf, dropTier, addDay, walkStreak, shinyChance, encounterLevel, evolveTo, rollEncounter, TRAINER_LV, newBattle, runTurn, aiChoose, doSwitch, effSpe, estDamage, lossInsight, battler };
 })();

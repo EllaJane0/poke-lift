@@ -11,18 +11,19 @@ function toast(msg) { U.toast = msg; go(); clearTimeout(toastT); toastT = setTim
 const TYPE_COL = { Normal:"#9a9a78", Fire:"#e8732c", Water:"#4d84e6", Electric:"#e0b600", Grass:"#5aa83a", Ice:"#6cc4c4", Fighting:"#b8322a", Poison:"#94409a",
   Ground:"#cba04c", Flying:"#8b7ae0", Psychic:"#ec4f7d", Bug:"#93a81a", Rock:"#a8902e", Ghost:"#6a5694", Dragon:"#6a3cf0", Dark:"#6b5446", Steel:"#9a9ab6" };
 let SPRITES_OK = true;
-const SPR = (sp, back) => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${back ? "back/" : ""}${sp}.png`;
-function Sprite({ sp, size = 64, back = false }) {
+const SPR = (sp, back, shiny) => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${back ? "back/" : ""}${shiny ? "shiny/" : ""}${sp}.png`;
+function Sprite({ sp, size = 64, back = false, shiny = false }) {
   const [bad, setBad] = useState(!SPRITES_OK);
   const m = PL.mon(sp); const t = m.t;
   const bg = t.length > 1 ? `linear-gradient(135deg,${TYPE_COL[t[0]]} 50%,${TYPE_COL[t[1]]} 50%)` : TYPE_COL[t[0]];
-  return html`<span class="spr" style=${`width:${size}px;height:${size}px`} title=${m.n}>
+  return html`<span class="spr" style=${`width:${size}px;height:${size}px`} title=${(shiny ? "Shiny " : "") + m.n}>
     ${bad ? html`<span class="fb" style=${`background:${bg};font-size:${Math.round(size * .3)}px`}>${m.n.replace(/[^A-Za-z]/g, "").slice(0, 2)}</span>`
-          : html`<img src=${SPR(sp, back)} alt=${m.n} loading="lazy" onError=${() => { SPRITES_OK = false; setBad(true); }} />`}</span>`;
+          : html`<img src=${SPR(sp, back, shiny)} alt=${(shiny ? "Shiny " : "") + m.n} loading="lazy" onError=${() => { SPRITES_OK = false; setBad(true); }} />`}
+    ${shiny && html`<span class="star" aria-hidden="true">✦</span>`}</span>`;
 }
 const TypePill = ({ t }) => html`<span class="tp" style=${`background:${TYPE_COL[t] || "#888"}`}>${t}</span>`;
 const Bar = ({ pct, cls = "" }) => html`<div class=${"bar " + cls}><i style=${`width:${Math.max(0, Math.min(100, pct * 100))}%`}></i></div>`;
-const Egg = ({ tier, size = 1 }) => html`<span class=${"egg " + tier} style=${`transform:scale(${size})`}></span>`;
+const ShinyTag = ({ m }) => m && m.shiny ? html` <span class="shiny-tag" title="Shiny">✦</span>` : null;
 
 const IC = {
   home: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>`,
@@ -54,16 +55,15 @@ function Home() {
   const g = G_(); const a = monOf(g.active);
   const today = S.core.sched[dk()] || [];
   const sessToday = S.sessions.filter(s => dk(new Date(s.end)) === dk());
-  const egg = g.eggs.find(e => e.id === g.incub);
   const gi = currentGym(); const gym = PL.GYMS[gi]; const allBadges = g.badges.g7;
   let nextOpp = 0; while (nextOpp < 3 && oppUnlocked(gi, nextOpp + 1)) nextOpp++;
   return html`<div class="wrap">
     <div class="top"><div class="grow"><div class="sub">${fmtDate(Date.now(), { weekday: "long", month: "long", day: "numeric" })}</div><h1>PokéLift</h1></div>
       <button aria-label="Settings" class="btn sm" onClick=${() => openSheet(Settings)}>${IC.gear}</button></div>
     ${a && html`<button class="card row" style="width:100%;text-align:left;gap:14px" onClick=${() => openSheet(MonSheet, { uid: a.uid })}>
-      <${Sprite} sp=${a.sp} size=${84} />
+      <${Sprite} sp=${a.sp} size=${84} shiny=${a.shiny} />
       <div class="grow"><div class="tiny faint b" style="text-transform:uppercase;letter-spacing:.06em">Active · gets full XP</div>
-        <div class="row" style="gap:8px;margin:2px 0 6px"><span style="font-size:20px;font-weight:700">${monName(a)}</span><span class="muted num">Lv ${a.lv}</span></div>
+        <div class="row" style="gap:8px;margin:2px 0 6px"><span style="font-size:20px;font-weight:700">${monName(a)}<${ShinyTag} m=${a} /></span><span class="muted num">Lv ${a.lv}</span></div>
         <${Bar} pct=${PL.xpProgress(a).pct} /><div class="tiny muted num" style="margin-top:4px">${a.lv >= 100 ? "Max level" : PL.xpProgress(a).toNext.toLocaleString() + " XP to Lv " + (a.lv + 1)}</div></div></button>`}
     <h2 class="sec">Today</h2>
     <div class="stack">
@@ -79,10 +79,7 @@ function Home() {
     </div>
     <h2 class="sec">Progress</h2>
     <div class="stack">
-      <button class="card row" style="width:100%;text-align:left" onClick=${() => { U.tab = "team"; U.teamSeg = "eggs"; go(); }}>
-        ${egg ? html`<${Egg} tier=${egg.tier} />` : html`<span class="egg" style="background:var(--sunk);border-style:dashed"></span>`}
-        <div class="grow">${egg ? html`<div class="b">${PL.EGG[egg.tier].label}</div><${Bar} pct=${egg.steps / egg.need} /><div class="tiny muted num" style="margin-top:4px">${Math.max(0, egg.need - egg.steps).toLocaleString()} steps to hatch</div>`
-          : html`<div class="b">Incubator empty</div><div class="small muted">${g.eggs.length ? `You have ${g.eggs.length} egg${g.eggs.length > 1 ? "s" : ""}. Steps only count while one is incubating.` : "Win battles to earn eggs."}</div>`}</div><span class="chev">›</span></button>
+      <${StepsCard} />
       <button class="card row" style="width:100%;text-align:left" onClick=${() => { U.tab = "gyms"; go(); openSheet(GymSheet, { i: gi }); }}>
         <span class="badge" style=${`background:${TYPE_COL[gym.type]}`}>${gym.badge.slice(0, 2)}</span>
         <div class="grow"><div class="b">${allBadges ? "All 8 badges earned" : gym.name}</div><div class="small muted">${allBadges ? "Rematch any gym anytime" : `Next: ${gym.ladder[nextOpp].cls} · ${PL.TIER[gym.ladder[nextOpp].tier].label}`}</div></div><span class="chev">›</span></button>
@@ -323,8 +320,8 @@ function Settings() {
     <p class="tiny muted">Every ${st.lbPerLevel.toLocaleString()} lb you lift is worth 1 level to your active Pokémon, at any level. A ${fmtVol(st.lbPerLevel * .75)} lb workout = ¾ of a level. Changing this only affects future workouts.</p>
     <label class="l" for="set-share">Party share (% of your pounds the rest of the party gets)</label><input id="set-share" class="f num" inputmode="numeric" value=${Math.round(st.share * 100)} onChange=${e => num("share", e.target.value, v => parseFloat(v) / 100)} />
     <label class="l" for="set-rest">Default rest timer (seconds)</label><input id="set-rest" class="f num" inputmode="numeric" value=${st.rest} onChange=${e => num("rest", e.target.value, v => parseInt(v))} />
-    <h2 class="sec">Steps to hatch</h2>
-    <div class="row">${["common","uncommon","rare"].map(t => html`<div class="grow"><label class="l" for=${"es-" + t} style="margin-top:0;text-transform:capitalize">${t}</label><input id=${"es-" + t} class="f num" inputmode="numeric" value=${st.eggSteps[t]} onChange=${e => mutate(() => { const n = parseInt(e.target.value); if (n > 0) st.eggSteps[t] = n; })} /></div>`)}</div>
+    <h2 class="sec">Steps</h2>
+    <button class="btn wide" onClick=${() => openSheet(WalkSheet)}>Steps, streak, and iPhone sync</button>
     <h2 class="sec">Data</h2>
     ${MODE === "cloud" && html`<div class="card row" style="margin-bottom:10px"><div class="grow"><div class="tiny muted">Signed in as</div><div class="b" style="word-break:break-all">${S.auth.email}</div></div>
       <button class="btn sm" onClick=${() => openSheet(Confirm, { title: "Sign out?", body: hasPending() ? "Some changes haven't synced yet. Signing out now could lose them. Reconnect to the internet first if you can." : "Your data stays in your account. Sign back in with the same email to see it.", yes: "Sign out", onYes: () => { closeAll(); U.tab = "home"; signOut(); } })}>Sign out</button></div>`}

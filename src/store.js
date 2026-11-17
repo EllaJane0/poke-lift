@@ -20,6 +20,7 @@ const EX_SEED = [
   ["Pull-up","bw","Back",1],["Chin-up","bw","Back",1],["Push-up","bw","Chest",0.65],["Dip","bw","Chest",1],
   ["Plank","time","Core"],["Treadmill Run","distance","Cardio"],
 ];
+function newWalk() { return { start: dk(), days: {}, claimed: {}, pending: [], shinyAt: 0, lastSync: 0 }; }
 function defaultCore() {
   const exercises = {};
   for (const [name, kind, muscle, mod] of EX_SEED) { const id = slug(name); exercises[id] = { id, name, kind, muscle, mod: mod || 0, rest: null }; }
@@ -34,7 +35,7 @@ function defaultCore() {
       { id: PL.uid(), name: "Legs", items: [it("back-squat",4,6), it("romanian-deadlift",3,8), it("leg-press",3,10), it("leg-curl",3,12), it("standing-calf-raise",4,12)] },
     ],
     sched: {},
-    game: { started: false, mons: {}, party: [], active: null, bank: 0, bankLv: true, bankLog: [], badges: {}, beaten: {}, eggs: [], incub: null, steps: 0, dex: [] },
+    game: { started: false, mons: {}, party: [], active: null, bank: 0, bankLv: true, bankLog: [], badges: {}, beaten: {}, dex: [], walk: newWalk() },
   };
 }
 
@@ -46,7 +47,14 @@ const S = { core: null, sessions: [], active: null, sync: "device", hist: null, 
 function loadLocal() { S.core = migrate(LS.get(NS + "core") || defaultCore()); S.sessions = LS.get(NS + "sessions") || []; S.active = LS.get(NS + "active"); S.hist = null; }
 /* v2: XP comes from pounds-per-level; the XP Bank holds levels instead of raw XP */
 function migrate(c) { if (!c) return c; const st = c.settings || (c.settings = {}); if (!st.lbPerLevel) st.lbPerLevel = 20000; delete st.rate;
-  const g = c.game; if (g && !g.bankLv) { g.bank = Math.round(((g.bank || 0) / 1500) * 10) / 10; g.bankLv = true; } return c; }
+  const g = c.game; if (g && !g.bankLv) { g.bank = Math.round(((g.bank || 0) / 1500) * 10) / 10; g.bankLv = true; }
+  /* v3: walking encounters replace eggs; any unhatched eggs hatch right away as encounters of their tier */
+  delete st.eggSteps;
+  if (g && !g.walk) g.walk = newWalk();
+  if (g && g.eggs && g.eggs.length) { const lv = Object.values(g.mons).map(m => m.lv);
+    for (const e of g.eggs) { const m = PL.rollEncounter({ pool: e.tier, levels: lv, prs: 0 }); m.shiny = false; m.fromEgg = true; g.walk.pending.push(m); } }
+  if (g) { delete g.eggs; delete g.incub; delete g.steps; }
+  return c; }
 if (MODE !== "cloud") loadLocal();
 let rerender = () => {};
 const setRerender = f => { rerender = f; };
@@ -146,6 +154,7 @@ async function enterUser(user) {
     S.sync = "synced";
   } catch (e) { S.sync = "error"; }
   S.auth.ready = true; rerender();
+  refreshSteps();
 }
 function leaveUser() {
   S.auth = { state: "out", email: "", uid: null }; NS = "pl."; S.core = null; S.sessions = []; S.active = null; S.hist = null;
@@ -196,6 +205,59 @@ function addMon(m) {
   const g = G_(); g.mons[m.uid] = m; if (!g.dex.includes(m.sp)) g.dex.push(m.sp);
   if (g.party.length < 6) g.party.push(m.uid);
   if (!g.active) g.active = m.uid;
+}
+/* ---------- walking ---------- */
+const W_ = () => G_().walk;
+function prsSince(t) { return S.sessions.reduce((n, s) => n + (s.end > (t || 0) ? (s.prs || 0) : 0), 0); }
+function walkStatus() {
+  const w = W_(), today = dk(); const { s } = PL.walkStreak(w.days, w.start, today);
+  const steps = w.days[today] || 0;
+  // streak if today ends below 10k vs. if it's hit
+  const ifHit = steps >= PL.STEP_GOAL ? s : PL.walkStreak({ ...w.days, [today]: PL.STEP_GOAL }, w.start, today).s;
+  const prs = prsSince(w.shinyAt);
+  return { today, steps, streak: s, tier: PL.tierOf(s), ifHit, prs, shiny: PL.shinyChance(prs), hit: steps >= PL.STEP_GOAL };
+}
+/* Turn every 10k day that hasn't produced an encounter yet into one. */
+function processWalk() {
+  if (!S.core || !G_().started) return false;
+  const w = W_(), today = dk(); const { byDay } = PL.walkStreak(w.days, w.start, today); let changed = false;
+  for (let d = w.start; d <= today; d = PL.addDay(d, 1)) {
+    if ((w.days[d] || 0) < PL.STEP_GOAL || w.claimed[d]) continue;
+    const m = PL.rollEncounter({ streak: byDay[d], levels: Object.values(G_().mons).map(x => x.lv), prs: prsSince(w.shinyAt) });
+    m.day = d; m.steps = w.days[d]; w.pending.push(m); w.claimed[d] = true; if (m.shiny) w.shinyAt = Date.now(); changed = true;
+  }
+  if (changed) saveCore();
+  return changed;
+}
+function acceptEncounter() {
+  const w = W_(); const m = w.pending.shift(); if (!m) return null;
+  const full = G_().party.length >= 6;
+  delete m.day; delete m.steps; delete m.wild; delete m.pool; delete m.fromEgg; m.got = Date.now();
+  addMon(m); saveCore(); return { m, full };
+}
+let stepsBusy = false;
+async function refreshSteps() {
+  if (MODE === "cloud" && R.sb && S.auth.uid && !stepsBusy) {
+    stepsBusy = true;
+    try {
+      const since = PL.addDay(dk(), -30);
+      const r = await R.sb.from("pokelift_steps").select("day,steps,source,updated_at").gte("day", since);
+      if (!r.error && S.core) { const w = W_(); let ch = false;
+        for (const row of r.data) { if ((w.days[row.day] || 0) < row.steps) { w.days[row.day] = row.steps; ch = true; }
+          if (row.source === "shortcut") { const t = Date.parse(row.updated_at); if (t > (w.lastSync || 0)) { w.lastSync = t; ch = true; } } }
+        if (ch) saveCore(); }
+    } catch (e) {}
+    stepsBusy = false;
+  }
+  processWalk(); rerender();
+}
+function setSteps(day, n) {
+  const w = W_(); w.days[day] = Math.max(0, Math.min(200000, Math.round(n))); saveCore();
+  if (MODE === "cloud" && R.sb && S.auth.uid) put("st:" + day, async () => { const { error } = await R.sb.from("pokelift_steps").upsert({ user_id: S.auth.uid, day, steps: w.days[day], source: "app", updated_at: new Date().toISOString() }); if (error) throw error; });
+  processWalk(); rerender();
+}
+async function stepToken(regenerate = false) {
+  const { data, error } = await R.sb.rpc("pokelift_step_token", { regenerate }); if (error) throw error; return data;
 }
 function sessionsDone() { return S.sessions.length; }
 function fmtLv(n) { const r = Math.round(n * 100) / 100; return `${r} level${r === 1 ? "" : "s"}`; }
