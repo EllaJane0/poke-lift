@@ -285,8 +285,9 @@ function ShortcutSheet() {
       <li><b>Find Health Samples</b>: Type is <b>Steps</b>, Start Date is <b>Today</b>, Group By <b>Day</b>.</li>
       <li><b>Calculate Statistics</b>: <b>Sum</b> of Health Samples.</li>
       <li><b>Format Date</b>: Current Date, Date Format <b>Custom</b>, format <code>yyyy-MM-dd</code>.</li>
-      <li><b>Get Contents of URL</b>: paste the URL. Tap <b>Show More</b>, set Method to <b>POST</b>. Under Headers add <code>apikey</code> with the apikey value. Request Body <b>JSON</b> with three fields:
-        <code>token</code> (Text) = your sync code, <code>day</code> (Text) = Formatted Date, <code>steps</code> (Number) = Statistics.</li>
+      <li><b>Get Contents of URL</b>: paste the URL. Tap <b>Show More</b>, set Method to <b>POST</b>. Each row has a <b>key on the left</b> and a <b>value on the right</b>. Under Headers add one row: key <code>apikey</code>, value = the apikey above. Set Request Body to <b>JSON</b> and add three fields:
+        <div style="margin:6px 0"><b>Text</b> · key <code>token</code> · value = your sync code<br><b>Text</b> · key <code>day</code> · value = the <b>Formatted Date</b> variable<br><b>Number</b> · key <code>steps</code> · value = the <b>Statistics</b> variable</div>
+        For the two variables, tap the value box and pick them from the bar above the keyboard instead of typing.</li>
       <li>Name it <b>PokéLift Steps</b> and tap ▶ once. Allow Health access when asked. It should show <code>{"ok": true, …}</code>.</li></ol></div>
     <h2 class="sec">2. Make it run automatically</h2>
     <div class="card small"><div class="muted">In Shortcuts, open <b>Automation</b> → <b>+</b> → <b>Time of Day</b>. Set the time, <b>Daily</b>, choose <b>Run Immediately</b>, and pick PokéLift Steps. Make one for each time:</div>
