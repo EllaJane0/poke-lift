@@ -659,7 +659,7 @@ function defaultCore() {
   const it = (ex, sets, reps) => ({ ex, sets, reps });
   return {
     v: 1, updated: Date.now(),
-    settings: { lbPerLevel: 20000, share: 0.5, bw: 180, rest: 90, eggSteps: { common: 5000, uncommon: 10000, rare: 20000 } },
+    settings: { lbPerLevel: 20000, share: 0.5, bw: 180, rest: 90 },
     bwlog: [], exercises,
     templates: [
       { id: PL.uid(), name: "Push", items: [it("barbell-bench-press",4,8), it("overhead-press",3,8), it("incline-dumbbell-press",3,10), it("lateral-raise",3,12), it("tricep-pushdown",3,12), it("push-up",2,15)] },
