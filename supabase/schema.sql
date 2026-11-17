@@ -87,19 +87,21 @@ end $$;
 -- Called by the iPhone Shortcut (anonymous, checked by token). Never lowers a day's total.
 create or replace function public.pokelift_report_steps(token text, day date, steps numeric)
 returns json language plpgsql security definer set search_path = '' as $$
+#variable_conflict use_column
 declare
   uid uuid;
   n integer := round($3);
+  d date := $2;
 begin
   select st.user_id into uid from public.pokelift_step_tokens st where st.token = $1;
   if uid is null then raise exception 'Unknown PokéLift step token' using errcode = '28000'; end if;
   if n < 0 or n > 200000 then raise exception 'Step count out of range' using errcode = '22003'; end if;
-  if $2 < current_date - 7 or $2 > current_date + 1 then raise exception 'Date out of range' using errcode = '22008'; end if;
+  if d < current_date - 7 or d > current_date + 1 then raise exception 'Date out of range' using errcode = '22008'; end if;
   insert into public.pokelift_steps as ps (user_id, day, steps, source, updated_at)
-    values (uid, $2, n, 'shortcut', now())
-    on conflict (user_id, day) do update
+    values (uid, d, n, 'shortcut', now())
+    on conflict on constraint pokelift_steps_pkey do update
       set steps = greatest(ps.steps, excluded.steps), source = 'shortcut', updated_at = now();
-  return json_build_object('ok', true, 'day', $2, 'steps', n);
+  return json_build_object('ok', true, 'day', d, 'steps', n);
 end $$;
 revoke all on function public.pokelift_report_steps(text, date, numeric) from public, authenticated;
 grant execute on function public.pokelift_report_steps(text, date, numeric) to anon;
