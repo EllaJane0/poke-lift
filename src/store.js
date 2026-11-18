@@ -209,22 +209,22 @@ function addMon(m) {
 /* ---------- walking ---------- */
 const W_ = () => G_().walk;
 function prsSince(t) { return S.sessions.reduce((n, s) => n + (s.end > (t || 0) ? (s.prs || 0) : 0), 0); }
+/* encounters already given; older saves counted one per 10k day */
+const givenOf = w => (w.given != null ? w.given : Object.keys(w.claimed || {}).length);
 function walkStatus() {
-  const w = W_(), today = dk(); const { s } = PL.walkStreak(w.days, w.start, today);
-  const steps = w.days[today] || 0;
-  // streak if today ends below 10k vs. if it's hit
-  const ifHit = steps >= PL.STEP_GOAL ? s : PL.walkStreak({ ...w.days, [today]: PL.STEP_GOAL }, w.start, today).s;
+  const w = W_(), today = dk(); const total = PL.totalSteps(w.days, w.start); const given = givenOf(w);
+  const since = Math.max(0, total - given * PL.STEP_GOAL);
   const prs = prsSince(w.shinyAt);
-  return { today, steps, streak: s, tier: PL.tierOf(s), ifHit, prs, shiny: PL.shinyChance(prs), hit: steps >= PL.STEP_GOAL };
+  return { today, steps: w.days[today] || 0, total, given, since, toGo: Math.max(0, PL.STEP_GOAL - since), prs, shiny: PL.shinyChance(prs) };
 }
-/* Turn every 10k day that hasn't produced an encounter yet into one. */
+/* Every 10,000 steps walked in total (across any number of days) brings one encounter. */
 function processWalk() {
   if (!S.core || !G_().started) return false;
-  const w = W_(), today = dk(); const { byDay } = PL.walkStreak(w.days, w.start, today); let changed = false;
-  for (let d = w.start; d <= today; d = PL.addDay(d, 1)) {
-    if ((w.days[d] || 0) < PL.STEP_GOAL || w.claimed[d]) continue;
-    const m = PL.rollEncounter({ streak: byDay[d], levels: Object.values(G_().mons).map(x => x.lv), prs: prsSince(w.shinyAt) });
-    m.day = d; m.steps = w.days[d]; w.pending.push(m); w.claimed[d] = true; if (m.shiny) w.shinyAt = Date.now(); changed = true;
+  const w = W_(); if (w.given == null) w.given = givenOf(w);
+  const earned = Math.floor(PL.totalSteps(w.days, w.start) / PL.STEP_GOAL); let changed = false;
+  while (w.given < earned) {
+    const m = PL.rollEncounter({ levels: Object.values(G_().mons).map(x => x.lv), prs: prsSince(w.shinyAt) });
+    w.given += 1; m.total = w.given * PL.STEP_GOAL; w.pending.push(m); if (m.shiny) w.shinyAt = Date.now(); changed = true;
   }
   if (changed) saveCore();
   return changed;
@@ -232,7 +232,7 @@ function processWalk() {
 function acceptEncounter() {
   const w = W_(); const m = w.pending.shift(); if (!m) return null;
   const full = G_().party.length >= 6;
-  delete m.day; delete m.steps; delete m.wild; delete m.pool; delete m.fromEgg; m.got = Date.now();
+  delete m.day; delete m.steps; delete m.total; delete m.wild; delete m.pool; delete m.fromEgg; m.got = Date.now();
   addMon(m); saveCore(); return { m, full };
 }
 let stepsBusy = false;

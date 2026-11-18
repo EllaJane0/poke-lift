@@ -170,28 +170,12 @@ const POOLS = {
   uncommon: "Pikachu,Clefairy,Jigglypuff,Vulpix,Growlithe,Abra,Machop,Ponyta,Slowpoke,Seel,Grimer,Gastly,Onix,Drowzee,Exeggcute,Cubone,Koffing,Rhyhorn,Tangela,Staryu,Farfetch'd,Lickitung,Hitmonlee,Hitmonchan,Mr. Mime,Jynx,Electabuzz,Magmar,Pinsir".split(",").map(sid),
   rare: "Bulbasaur,Charmander,Squirtle,Eevee,Dratini,Lapras,Snorlax,Scyther,Kangaskhan,Chansey,Tauros,Porygon,Omanyte,Kabuto,Aerodactyl,Ditto".split(",").map(sid),
 };
-/* ---------- walking: daily 10k encounters, streak tiers, shinies ---------- */
+/* ---------- walking: an encounter for every 10,000 steps, counted cumulatively; shinies ---------- */
 const STEP_GOAL = 10000;
-const STREAK_TIERS = [ // reached at this many streak days; odds of each pool
-  { at: 0, label: "Tier 1", odds: { common: 1 } },
-  { at: 3, label: "Tier 2", odds: { common: .7, uncommon: .3 } },
-  { at: 7, label: "Tier 3", odds: { common: .5, uncommon: .35, rare: .15 } },
-];
-const tierOf = s => { let t = 0; STREAK_TIERS.forEach((x, i) => { if (s >= x.at) t = i; }); return t; };
-const dropTier = s => { const t = tierOf(s); return t === 0 ? 0 : STREAK_TIERS[t - 1].at; };
+const ENCOUNTER_ODDS = { common: .5, uncommon: .3, rare: .2 };
 const addDay = (k, n) => { const [y, m, d] = k.split("-").map(Number); const x = new Date(y, m - 1, d + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
-/* Replays every day from `start` to `today`: a 10k day adds 1 to the streak; a finished day under 10k drops one tier.
-   Today only counts once it reaches 10k (it can't be missed until it's over). */
-function walkStreak(days, start, today) {
-  let s = 0; const byDay = {};
-  if (!start) return { s, byDay };
-  for (let d = start; d <= today; d = addDay(d, 1)) {
-    const n = days[d] || 0;
-    if (n >= STEP_GOAL) s += 1; else if (d < today) s = dropTier(s);
-    byDay[d] = s;
-  }
-  return { s, byDay };
-}
+/* All steps counted since walking started (days before `start` don't count). */
+function totalSteps(days, start) { let t = 0; for (const d in days) if (!start || d >= start) t += days[d] || 0; return t; }
 const SHINY_BASE = 0.02, SHINY_PER_PR = 0.0025, SHINY_MAX = 0.25;
 const shinyChance = prs => Math.min(SHINY_MAX, SHINY_BASE + SHINY_PER_PR * Math.max(0, prs));
 /* Wild level: 70–90% of the average of your three highest-level Pokémon (at least 5).
@@ -205,8 +189,8 @@ function evolveTo(sp, lv, rng = Math.random) {
   for (let guard = 0; guard < 3; guard++) { const e = mon(sp).e.filter(x => x.lv <= lv); if (!e.length) break; sp = e[Math.floor(rng() * e.length)].to; }
   return sp;
 }
-function rollEncounter({ streak, levels, prs, pool: forced }, rng = Math.random) {
-  const odds = STREAK_TIERS[tierOf(streak || 0)].odds; let r = rng(), pool = forced || "common";
+function rollEncounter({ levels, prs, pool: forced }, rng = Math.random) {
+  const odds = ENCOUNTER_ODDS; let r = rng(), pool = forced || "common";
   if (!forced) for (const k of ["rare", "uncommon", "common"]) { if (!odds[k]) continue; if (r < odds[k]) { pool = k; break; } r -= odds[k]; }
   const base = POOLS[pool][Math.floor(rng() * POOLS[pool].length)];
   const lv = encounterLevel(levels, rng);
@@ -449,5 +433,5 @@ function lossInsight(B) {
 
 return { G, TYPES, TC, eff, mon, move, sid, expFor, growthName, calcStats, movesAt, newMon, randIV, uid, awardXP, removeXP, levelsToXP, lbToXP, evoOptions, evolve, relearnable, xpProgress,
   setLoad, sessionVolume, e1rm, buildHistory, lastFor, isPR, priorSetsFor,
-  GYMS, TIER, POOLS, EGG, MILESTONES, STEP_GOAL, STREAK_TIERS, tierOf, dropTier, addDay, walkStreak, shinyChance, encounterLevel, evolveTo, rollEncounter, TRAINER_LV, newBattle, runTurn, aiChoose, doSwitch, effSpe, estDamage, lossInsight, battler };
+  GYMS, TIER, POOLS, EGG, MILESTONES, STEP_GOAL, ENCOUNTER_ODDS, addDay, totalSteps, shinyChance, encounterLevel, evolveTo, rollEncounter, TRAINER_LV, newBattle, runTurn, aiChoose, doSwitch, effSpe, estDamage, lossInsight, battler };
 })();

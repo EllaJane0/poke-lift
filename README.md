@@ -10,8 +10,7 @@ Every 20,000 lb you lift (weight × reps, with bodyweight counted for pull-ups a
 
 ## Walking
 
-- **Daily encounter:** reach 10,000 steps and a wild Pokémon appears. Its level is 70–90% of the average of your three highest-level Pokémon, and it arrives already evolved if it's past its evolution level.
-- **Streak tiers:** each 10k day in a row adds to your streak. Tier 1 (days 1–2) draws from the common pool; Tier 2 (3+ days) is 70% common, 30% uncommon; Tier 3 (7+ days) is 50% common, 35% uncommon, 15% rare. A finished day under 10k drops you one tier.
+- **Encounters:** every 10,000 steps you walk, counted cumulatively across days, a wild Pokémon appears: 50% common, 30% uncommon, 20% rare. Its level is 70–90% of the average of your three highest-level Pokémon, and it arrives already evolved if it's past its evolution level.
 - **Shinies:** 2% (1 in 50) per encounter, plus 0.25% for every PR since your last shiny, up to 25%. Catching one resets it to 2%.
 - **iPhone step sync:** a Shortcut reads Apple Health and posts the day's total to `rest/v1/rpc/pokelift_report_steps` with a private per-user sync code. The app shows the setup steps (Home → Today's steps → Set up iPhone sync). Run it from Shortcuts automations through the day and at 11:30 PM. Steps can also be entered by hand.
 

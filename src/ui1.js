@@ -321,7 +321,7 @@ function Settings() {
     <label class="l" for="set-share">Party share (% of your pounds the rest of the party gets)</label><input id="set-share" class="f num" inputmode="numeric" value=${Math.round(st.share * 100)} onChange=${e => num("share", e.target.value, v => parseFloat(v) / 100)} />
     <label class="l" for="set-rest">Default rest timer (seconds)</label><input id="set-rest" class="f num" inputmode="numeric" value=${st.rest} onChange=${e => num("rest", e.target.value, v => parseInt(v))} />
     <h2 class="sec">Steps</h2>
-    <button class="btn wide" onClick=${() => openSheet(WalkSheet)}>Steps, streak, and iPhone sync</button>
+    <button class="btn wide" onClick=${() => openSheet(WalkSheet)}>Steps and iPhone sync</button>
     <h2 class="sec">Data</h2>
     ${MODE === "cloud" && html`<div class="card row" style="margin-bottom:10px"><div class="grow"><div class="tiny muted">Signed in as</div><div class="b" style="word-break:break-all">${S.auth.email}</div></div>
       <button class="btn sm" onClick=${() => openSheet(Confirm, { title: "Sign out?", body: hasPending() ? "Some changes haven't synced yet. Signing out now could lose them. Reconnect to the internet first if you can." : "Your data stays in your account. Sign back in with the same email to see it.", yes: "Sign out", onYes: () => { closeAll(); U.tab = "home"; signOut(); } })}>Sign out</button></div>`}

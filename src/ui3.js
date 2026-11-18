@@ -224,19 +224,15 @@ function AuthScreen() {
 }
 /* ---------------- walking ---------------- */
 const pct = x => (x * 100).toFixed(x < 0.1 ? 2 : 1).replace(/\.0+$/, "") + "%";
-function oddsText(t) { const o = PL.STREAK_TIERS[t].odds; return ["common", "uncommon", "rare"].filter(k => o[k]).map(k => `${Math.round(o[k] * 100)}% ${k}`).join(" · "); }
-function nextTierText(st) {
-  const t = st.tier; if (t >= PL.STREAK_TIERS.length - 1) return "Top tier";
-  const need = PL.STREAK_TIERS[t + 1].at - st.streak; return `${need} more 10k day${need === 1 ? "" : "s"} to ${PL.STREAK_TIERS[t + 1].label}`;
-}
+function oddsText() { const o = PL.ENCOUNTER_ODDS; return ["common", "uncommon", "rare"].map(k => `${Math.round(o[k] * 100)}% ${k}`).join(" · "); }
 function StepsCard() {
   const st = walkStatus(); const w = W_();
   return html`<button class="card" style="width:100%;text-align:left" onClick=${() => openSheet(WalkSheet)}>
-    <div class="row"><div class="grow"><div class="tiny faint b" style="text-transform:uppercase;letter-spacing:.06em">Today's steps</div>
-      <div class="num" style="font-size:22px;font-weight:700">${st.steps.toLocaleString()}<span class="small muted" style="font-weight:500"> / ${PL.STEP_GOAL.toLocaleString()}</span></div></div>
-      ${st.hit ? html`<span class="chip" style="background:var(--ok-bg);color:var(--ok)">Encounter found</span>` : html`<span class="chev">›</span>`}</div>
-    <div style="margin:6px 0"><${Bar} cls="hp" pct=${st.steps / PL.STEP_GOAL} /></div>
-    <div class="small"><b>${st.streak}-day streak</b> · ${PL.STREAK_TIERS[st.tier].label} <span class="muted">(${oddsText(st.tier)})</span></div>
+    <div class="row"><div class="grow"><div class="tiny faint b" style="text-transform:uppercase;letter-spacing:.06em">Next encounter</div>
+      <div class="num" style="font-size:22px;font-weight:700">${st.since.toLocaleString()}<span class="small muted" style="font-weight:500"> / ${PL.STEP_GOAL.toLocaleString()} steps</span></div></div>
+      <span class="chev">›</span></div>
+    <div style="margin:6px 0"><${Bar} cls="hp" pct=${st.since / PL.STEP_GOAL} /></div>
+    <div class="small num"><b>Today ${st.steps.toLocaleString()}</b> <span class="muted">· ${oddsText()}</span></div>
     <div class="tiny muted num" style="margin-top:3px">Shiny chance ${pct(st.shiny)} · ${MODE === "cloud" ? (w.lastSync ? "iPhone sync " + new Date(w.lastSync).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }) : "iPhone sync not set up") : "steps entered by hand"}</div>
   </button>`;
 }
@@ -247,10 +243,10 @@ function WalkSheet() {
   const recent = Array.from({ length: 14 }, (_, i) => PL.addDay(st.today, -i)).filter(d => d >= w.start);
   const save = () => { const n = parseInt(String(val).replace(/\D/g, "")); if (!(n >= 0)) return; setSteps(day, n); setVal(""); toast(`${n.toLocaleString()} steps saved`); };
   return html`<${Sheet} title="Steps">
-    <p class="small muted" style="margin-top:-6px">Every day you reach ${PL.STEP_GOAL.toLocaleString()} steps, a wild Pokémon appears near your team's level. Each 10k day in a row raises your streak. A day under 10k drops you one tier.</p>
-    <div class="list">${PL.STREAK_TIERS.map((t, i) => html`<div class=${"li tier-row" + (i === st.tier ? " on" : "")} style="min-height:44px;padding:8px 12px">
-      <span class="b" style="width:56px">${t.label}</span><span class="grow small">${t.at === 0 ? "Days 1–2" : `${t.at}+ days`}</span><span class="small muted">${oddsText(i)}</span></div>`)}</div>
-    <div class="small" style="margin-top:8px"><b>${st.streak}-day streak</b> · ${nextTierText(st)}.${!st.hit && st.tier > 0 ? html` <span class="muted">Miss today and you drop to ${PL.STREAK_TIERS[st.tier - 1].label}.</span>` : ""}</div>
+    <p class="small muted" style="margin-top:-6px">Every ${PL.STEP_GOAL.toLocaleString()} steps you walk, counted across days, a wild Pokémon appears near your team's level. Each one is ${oddsText()}.</p>
+    <div class="stat-grid"><div class="tile"><div class="k">To next</div><div class="v">${st.toGo.toLocaleString()}</div></div>
+      <div class="tile"><div class="k">Total steps</div><div class="v">${fmtVol(st.total)}</div></div>
+      <div class="tile"><div class="k">Encounters</div><div class="v">${st.given}</div></div></div>
     <h2 class="sec">Shiny chance</h2>
     <div class="card small"><b class="num">${pct(st.shiny)}</b> per encounter. It starts at 2% (1 in 50) and every PR adds ${pct(0.0025)}, up to 25%. ${st.prs ? `${st.prs} PR${st.prs > 1 ? "s" : ""} since your last shiny.` : "No PRs since your last shiny yet."} Catching a shiny resets it to 2%.</div>
     <h2 class="sec">Last 14 days</h2>
@@ -298,12 +294,12 @@ function ShortcutSheet() {
 }
 function EncounterPrompt() {
   const w = W_(); const m = w.pending[0]; if (!m) return null; const sp = PL.mon(m.sp);
-  const when = m.fromEgg ? "Your saved egg hatched." : m.day ? `You walked ${(m.steps || 0).toLocaleString()} steps ${m.day === dk() ? "today" : "on " + fmtDate(m.day.replace(/-/g, "/"), { weekday: "long", month: "short", day: "numeric" })}.` : "";
+  const when = m.fromEgg ? "Your saved egg hatched." : m.total ? `You've walked ${m.total.toLocaleString()} steps in total.` : m.day ? `You walked ${(m.steps || 0).toLocaleString()} steps ${m.day === dk() ? "today" : "on " + fmtDate(m.day.replace(/-/g, "/"), { weekday: "long", month: "short", day: "numeric" })}.` : "";
   const take = () => { const r = acceptEncounter(); if (r) toast(`${PL.mon(r.m.sp).n} ${r.full ? "went to your box" : "joined your party"}`); go(); };
   return html`<div class="scrim" style="z-index:80"><div class="sheet"><div class="grab"></div><div class="center">
     <${Sprite} sp=${m.sp} size=${128} shiny=${m.shiny} />
     <h3 style="margin-bottom:4px">${m.shiny ? "✦ A shiny " : "A wild "}${sp.n} appeared!</h3>
-    <div class="row" style="justify-content:center;gap:6px;margin-bottom:8px">${sp.t.map(t => html`<${TypePill} t=${t} />`)}<span class="small num b">Lv ${m.lv}</span>${m.pool && m.pool !== "common" ? html`<span class="chip" style="text-transform:capitalize">${m.pool}</span>` : null}</div>
+    <div class="row" style="justify-content:center;gap:6px;margin-bottom:8px">${sp.t.map(t => html`<${TypePill} t=${t} />`)}<span class="small num b">Lv ${m.lv}</span>${m.pool ? html`<span class="chip" style="text-transform:capitalize">${m.pool}</span>` : null}</div>
     <p class="muted small" style="margin-top:0">${when}${w.pending.length > 1 ? ` ${w.pending.length - 1} more waiting.` : ""}</p></div>
     <button class="btn pri wide" onClick=${take}>Add to team</button>
     <div class="tiny muted center" style="margin-top:8px">${G_().party.length >= 6 ? "Your party is full, so it goes to your box." : "It joins your party."}</div></div></div>`;
