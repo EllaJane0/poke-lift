@@ -233,14 +233,18 @@ function TemplateEditor({ id }) {
     <button class="btn pri wide" style="margin-top:10px" onClick=${closeSheet}>Done</button><//>`;
 }
 function ExercisePicker({ onPick, title = "Add exercise" }) {
-  const [q, setQ] = useState(""); const [creating, setCreating] = useState(false);
+  const [q, setQ] = useState(""); const [creating, setCreating] = useState(false); const [mg, setMg] = useState("All");
   const all = Object.values(S.core.exercises).sort((a, b) => a.name.localeCompare(b.name));
-  const list = all.filter(e => e.name.toLowerCase().includes(q.toLowerCase()));
+  const ORDER = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms", "Legs", "Glutes", "Calves", "Core", "Full body", "Cardio"];
+  const groups = [...new Set(all.map(e => e.muscle || "Other"))].sort((a, b) => ((ORDER.indexOf(a) + 1) || 99) - ((ORDER.indexOf(b) + 1) || 99) || a.localeCompare(b));
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const list = all.filter(e => (mg === "All" || (e.muscle || "Other") === mg) && words.every(w => (e.name + " " + (e.muscle || "")).toLowerCase().includes(w)));
   if (creating) return html`<${NewExercise} name=${q} onDone=${id => { closeSheet(); onPick(id); }} />`;
   return html`<${Sheet} title=${title}>
-    <input class="f" placeholder="Search exercises" value=${q} onInput=${e => setQ(e.target.value)} aria-label="Search exercises" />
+    <input class="f" placeholder=${`Search ${all.length} exercises`} value=${q} onInput=${e => setQ(e.target.value)} aria-label="Search exercises" />
+    <div class="mg-row" role="group" aria-label="Filter by muscle group">${["All", ...groups].map(g => html`<button class=${"chip" + (mg === g ? " on" : "")} aria-pressed=${mg === g} onClick=${() => setMg(g)}>${g}</button>`)}</div>
     <div class="list" style="margin-top:10px;max-height:50vh;overflow-y:auto">${list.map(e => html`<button class="li" onClick=${() => { closeSheet(); onPick(e.id); }}><div class="grow"><div class="b">${e.name}</div><div class="tiny muted">${e.muscle || ""}${e.kind === "bw" ? ` · bodyweight ${Math.round(e.mod * 100)}%` : e.kind === "time" ? " · timed" : e.kind === "distance" ? " · distance" : ""}</div></div></button>`)}
-      ${!list.length && html`<div class="empty small">No match for “${q}”.</div>`}</div>
+      ${!list.length && html`<div class="empty small">No match${q ? ` for “${q}”` : ""}${mg !== "All" ? ` in ${mg}` : ""}.</div>`}</div>
     <button class="btn wide" style="margin-top:10px" onClick=${() => setCreating(true)}>+ Create ${q ? `“${q}”` : "new exercise"}</button><//>`;
 }
 function NewExercise({ name = "", onDone, id }) {

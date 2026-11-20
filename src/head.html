@@ -305,4 +305,8 @@ ol.steps li{margin:6px 0}
 .starters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .starter{display:flex;flex-direction:column;align-items:center;padding:10px 4px 12px}
 .starter.on{border-color:var(--red);box-shadow:0 0 0 3px var(--red-bg),0 3px 0 var(--shadow);transform:translateY(-3px)}
+.mg-row{display:flex;gap:6px;overflow-x:auto;margin:10px -16px 0;padding:2px 16px 4px;scrollbar-width:none}
+.mg-row::-webkit-scrollbar{display:none}
+.mg-row .chip{flex:none;height:30px;font-weight:600}
+.mg-row .chip.on{background:var(--red);color:#fff;border-color:var(--red-d)}
 </style>

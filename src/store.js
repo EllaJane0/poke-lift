@@ -16,17 +16,53 @@ const EX_SEED = [
   ["Barbell Row","weight","Back"],["Dumbbell Row","weight","Back"],["Lat Pulldown","weight","Back"],["Seated Cable Row","weight","Back"],["Shrug","weight","Back"],
   ["Barbell Curl","weight","Biceps"],["Dumbbell Curl","weight","Biceps"],["Hammer Curl","weight","Biceps"],
   ["Back Squat","weight","Legs"],["Front Squat","weight","Legs"],["Deadlift","weight","Legs"],["Romanian Deadlift","weight","Legs"],["Leg Press","weight","Legs"],
-  ["Bulgarian Split Squat","weight","Legs"],["Walking Lunge","weight","Legs"],["Leg Extension","weight","Legs"],["Leg Curl","weight","Legs"],["Hip Thrust","weight","Legs"],["Standing Calf Raise","weight","Legs"],
+  ["Bulgarian Split Squat","weight","Legs"],["Walking Lunge","weight","Legs"],["Leg Extension","weight","Legs"],["Leg Curl","weight","Legs"],["Hip Thrust","weight","Glutes"],["Standing Calf Raise","weight","Calves"],
   ["Pull-up","bw","Back",1],["Chin-up","bw","Back",1],["Push-up","bw","Chest",0.65],["Dip","bw","Chest",1],
   ["Plank","time","Core"],["Treadmill Run","distance","Cardio"],
+  /* v2 additions */
+  ["Incline Barbell Bench Press","weight","Chest"],["Decline Bench Press","weight","Chest"],["Machine Chest Press","weight","Chest"],["Smith Machine Bench Press","weight","Chest"],["Floor Press","weight","Chest"],
+  ["Dumbbell Fly","weight","Chest"],["Incline Dumbbell Fly","weight","Chest"],["Pec Deck","weight","Chest"],["Low-to-High Cable Fly","weight","Chest"],["High-to-Low Cable Fly","weight","Chest"],
+  ["Dumbbell Pullover","weight","Chest"],["Incline Machine Press","weight","Chest"],["Push Press","weight","Shoulders"],["Seated Dumbbell Press","weight","Shoulders"],["Arnold Press","weight","Shoulders"],
+  ["Machine Shoulder Press","weight","Shoulders"],["Landmine Press","weight","Shoulders"],["Cable Lateral Raise","weight","Shoulders"],["Machine Lateral Raise","weight","Shoulders"],["Front Raise","weight","Shoulders"],
+  ["Rear Delt Fly","weight","Shoulders"],["Reverse Pec Deck","weight","Shoulders"],["Upright Row","weight","Shoulders"],["Cable Rear Delt Fly","weight","Shoulders"],["Z Press","weight","Shoulders"],
+  ["Close-Grip Bench Press","weight","Triceps"],["Rope Pushdown","weight","Triceps"],["Single-Arm Cable Pushdown","weight","Triceps"],["Dumbbell Kickback","weight","Triceps"],["Cable Overhead Tricep Extension","weight","Triceps"],
+  ["JM Press","weight","Triceps"],["Dumbbell Overhead Tricep Extension","weight","Triceps"],["Tate Press","weight","Triceps"],["Pendlay Row","weight","Back"],["T-Bar Row","weight","Back"],
+  ["Chest-Supported Row","weight","Back"],["Machine Row","weight","Back"],["Meadows Row","weight","Back"],["Seal Row","weight","Back"],["Close-Grip Lat Pulldown","weight","Back"],
+  ["Single-Arm Lat Pulldown","weight","Back"],["Straight-Arm Pulldown","weight","Back"],["Rack Pull","weight","Back"],["Good Morning","weight","Back"],["Dumbbell Shrug","weight","Back"],
+  ["Kroc Row","weight","Back"],["Cable Pullover","weight","Back"],["EZ-Bar Curl","weight","Biceps"],["Preacher Curl","weight","Biceps"],["Incline Dumbbell Curl","weight","Biceps"],
+  ["Cable Curl","weight","Biceps"],["Concentration Curl","weight","Biceps"],["Spider Curl","weight","Biceps"],["Bayesian Curl","weight","Biceps"],["Machine Curl","weight","Biceps"],
+  ["Cable Hammer Curl","weight","Biceps"],["Reverse Curl","weight","Forearms"],["Wrist Curl","weight","Forearms"],["Reverse Wrist Curl","weight","Forearms"],["Hack Squat","weight","Legs"],
+  ["Goblet Squat","weight","Legs"],["Smith Machine Squat","weight","Legs"],["Pause Squat","weight","Legs"],["Box Squat","weight","Legs"],["Safety Bar Squat","weight","Legs"],
+  ["Belt Squat","weight","Legs"],["Pendulum Squat","weight","Legs"],["Zercher Squat","weight","Legs"],["Overhead Squat","weight","Legs"],["Sumo Deadlift","weight","Legs"],
+  ["Trap Bar Deadlift","weight","Legs"],["Stiff-Leg Deadlift","weight","Legs"],["Single-Leg Romanian Deadlift","weight","Legs"],["Deficit Deadlift","weight","Legs"],["Reverse Lunge","weight","Legs"],
+  ["Dumbbell Lunge","weight","Legs"],["Step-up","weight","Legs"],["Seated Leg Curl","weight","Legs"],["Lying Leg Curl","weight","Legs"],["Single-Leg Leg Press","weight","Legs"],
+  ["Hip Adduction Machine","weight","Legs"],["Barbell Glute Bridge","weight","Glutes"],["Dumbbell Hip Thrust","weight","Glutes"],["Cable Kickback","weight","Glutes"],["Hip Abduction Machine","weight","Glutes"],
+  ["Cable Pull-Through","weight","Glutes"],["Kettlebell Swing","weight","Glutes"],["Sumo Squat","weight","Glutes"],["Seated Calf Raise","weight","Calves"],["Leg Press Calf Raise","weight","Calves"],
+  ["Smith Machine Calf Raise","weight","Calves"],["Donkey Calf Raise","weight","Calves"],["Cable Crunch","weight","Core"],["Pallof Press","weight","Core"],["Cable Woodchop","weight","Core"],
+  ["Weighted Decline Sit-up","weight","Core"],["Landmine Rotation","weight","Core"],["Power Clean","weight","Full body"],["Hang Clean","weight","Full body"],["Clean and Jerk","weight","Full body"],
+  ["Snatch","weight","Full body"],["Hang Snatch","weight","Full body"],["Thruster","weight","Full body"],["Clean Pull","weight","Full body"],["Dumbbell Snatch","weight","Full body"],
+  ["Turkish Get-up","weight","Full body"],["Sandbag Carry","weight","Full body"],["Neutral-Grip Pull-up","bw","Back",1],["Wide-Grip Pull-up","bw","Back",1],["Muscle-up","bw","Back",1],
+  ["Inverted Row","bw","Back",0.6],["Diamond Push-up","bw","Chest",0.65],["Decline Push-up","bw","Chest",0.75],["Incline Push-up","bw","Chest",0.45],["Archer Push-up","bw","Chest",0.7],
+  ["Pike Push-up","bw","Shoulders",0.7],["Handstand Push-up","bw","Shoulders",1],["Bench Dip","bw","Triceps",0.6],["Bodyweight Squat","bw","Legs",0.7],["Jump Squat","bw","Legs",0.7],
+  ["Pistol Squat","bw","Legs",0.8],["Bodyweight Lunge","bw","Legs",0.7],["Nordic Hamstring Curl","bw","Legs",0.6],["Sissy Squat","bw","Legs",0.7],["Glute Bridge","bw","Glutes",0.5],
+  ["Single-Leg Hip Thrust","bw","Glutes",0.6],["Single-Leg Calf Raise","bw","Calves",1],["Hanging Leg Raise","bw","Core",0.35],["Hanging Knee Raise","bw","Core",0.3],["Toes-to-Bar","bw","Core",0.35],
+  ["Sit-up","bw","Core",0.4],["Crunch","bw","Core",0.3],["Ab Wheel Rollout","bw","Core",0.5],["Back Extension","bw","Core",0.5],["V-up","bw","Core",0.4],
+  ["Burpee","bw","Full body",0.7],["Box Jump","bw","Full body",0.9],["Side Plank","time","Core"],["Hollow Hold","time","Core"],["L-Sit","time","Core"],
+  ["Dead Bug","time","Core"],["Wall Sit","time","Legs"],["Dead Hang","time","Forearms"],["Farmer's Carry","time","Forearms"],["Jump Rope","time","Cardio"],
+  ["Battle Ropes","time","Cardio"],["Stair Climber","time","Cardio"],["Elliptical","time","Cardio"],["Sled Push","time","Cardio"],["Assault Bike","time","Cardio"],
+  ["Mountain Climbers","time","Cardio"],["HIIT Intervals","time","Cardio"],["Outdoor Run","distance","Cardio"],["Walk","distance","Cardio"],["Hike","distance","Cardio"],
+  ["Cycling","distance","Cardio"],["Stationary Bike","distance","Cardio"],["Rowing Machine","distance","Cardio"],["Swimming","distance","Cardio"],["Ski Erg","distance","Cardio"],
+  ["Rucking","distance","Cardio"],
 ];
+const EX_SEED_V = 2;
 function newWalk() { return { start: dk(), days: {}, claimed: {}, pending: [], shinyAt: 0, lastSync: 0 }; }
+function seedExercise(exercises, [name, kind, muscle, mod]) { const id = slug(name); if (!exercises[id]) exercises[id] = { id, name, kind, muscle, mod: mod || 0, rest: null }; }
 function defaultCore() {
   const exercises = {};
   for (const [name, kind, muscle, mod] of EX_SEED) { const id = slug(name); exercises[id] = { id, name, kind, muscle, mod: mod || 0, rest: null }; }
   const it = (ex, sets, reps) => ({ ex, sets, reps });
   return {
-    v: 1, updated: Date.now(),
+    v: 1, exSeed: EX_SEED_V, updated: Date.now(),
     settings: { lbPerLevel: 20000, share: 0.5, bw: 180, rest: 90 },
     bwlog: [], exercises,
     templates: [
@@ -54,6 +90,10 @@ function migrate(c) { if (!c) return c; const st = c.settings || (c.settings = {
   if (g && g.eggs && g.eggs.length) { const lv = Object.values(g.mons).map(m => m.lv);
     for (const e of g.eggs) { const m = PL.rollEncounter({ pool: e.tier, levels: lv, prs: 0 }); m.shiny = false; m.fromEgg = true; g.walk.pending.push(m); } }
   if (g) { delete g.eggs; delete g.incub; delete g.steps; }
+  /* exercise library v2: add the new built-in exercises once; never touches ones the user already has */
+  if ((c.exSeed || 1) < EX_SEED_V && c.exercises) { for (const e of EX_SEED) seedExercise(c.exercises, e);
+    for (const [id, m] of [["hip-thrust", "Glutes"], ["standing-calf-raise", "Calves"]]) { const x = c.exercises[id]; if (x && x.muscle === "Legs") x.muscle = m; }
+    c.exSeed = EX_SEED_V; }
   return c; }
 if (MODE !== "cloud") loadLocal();
 let rerender = () => {};
