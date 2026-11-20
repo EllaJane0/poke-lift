@@ -10,7 +10,7 @@ const js = ["logic.js", "store.js", "ui1.js", "ui2.js", "ui3.js"].map(f => r("sr
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#d6322a">
+<meta name="theme-color" content="#e3350d">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">

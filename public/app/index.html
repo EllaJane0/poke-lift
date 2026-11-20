@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#d6322a">
+<meta name="theme-color" content="#e3350d">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -10,76 +10,82 @@
 <title>PokéLift</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script>try{var T=localStorage.getItem("pl.theme")==="dark"?"dark":"light";document.documentElement.dataset.theme=T;if(T==="dark")document.querySelector('meta[name="theme-color"]').setAttribute("content","#1d1c1a")}catch(e){document.documentElement.dataset.theme="light"}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* Layout: single phone column, sticky top bar, fixed bottom tab bar; logger and battle are full-screen layers. */
 :root{
-  --bg:#f3f2f0; --card:#ffffff; --sunk:#ecebe8; --line:rgba(28,24,20,.10); --line2:rgba(28,24,20,.18);
-  --fg:#1b1917; --fg2:#5d5954; --fg3:#94908a;
-  --red:#d6322a; --red-bg:#fbe7e5; --red-fg:#a8231c;
+  --bg:#eceef1; --card:#ffffff; --sunk:#e3e6ea; --line:rgba(22,22,26,.10); --line2:rgba(22,22,26,.20);
+  --edge:#25272c; --shadow:rgba(22,22,26,.16);
+  --fg:#16161a; --fg2:#555a63; --fg3:#8b9099;
+  --red:#e3350d; --red-d:#b8280a; --red-bg:#fde6e0; --red-fg:#b42407;
   --ok:#1f8a4c; --ok-bg:#e1f3e8; --pr:#b36b00; --pr-bg:#fff0d4;
-  --blue:#2463c9; --blue-bg:#e4edfb;
-  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --blue:#2f80ed; --blue-bg:#e4edfb; --xp:#3fa9f5; --hp:#3cc56b;
+  --head:#e3350d; --head-fg:#ffffff;
+  --sans:"Rubik",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --pixel:"Silkscreen","Rubik",ui-monospace,monospace;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  --r:12px; --tab:62px;
+  --r:14px; --tab:64px;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#121110; --card:#1d1c1a; --sunk:#262422; --line:rgba(255,250,240,.09); --line2:rgba(255,250,240,.17);
-  --fg:#f2efe9; --fg2:#b4afa6; --fg3:#7d7870;
-  --red:#ef5348; --red-bg:#3a1714; --red-fg:#ff9a90; --ok:#4cc27c; --ok-bg:#15301f; --pr:#f0b24a; --pr-bg:#3a2a10;
-  --blue:#6aa2ff; --blue-bg:#16233a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#121110; --card:#1d1c1a; --sunk:#262422; --line:rgba(255,250,240,.09); --line2:rgba(255,250,240,.17);
+  --edge:#3a3835; --shadow:rgba(0,0,0,.45);
   --fg:#f2efe9; --fg2:#b4afa6; --fg3:#7d7870;
-  --red:#ef5348; --red-bg:#3a1714; --red-fg:#ff9a90; --ok:#4cc27c; --ok-bg:#15301f; --pr:#f0b24a; --pr-bg:#3a2a10;
-  --blue:#6aa2ff; --blue-bg:#16233a; color-scheme:dark}
+  --red:#ef5348; --red-d:#c23a30; --red-bg:#3a1714; --red-fg:#ff9a90; --ok:#4cc27c; --ok-bg:#15301f; --pr:#f0b24a; --pr-bg:#3a2a10;
+  --blue:#6aa2ff; --blue-bg:#16233a; --xp:#5bb6ff; --hp:#4cc27c;
+  --head:#1d1c1a; --head-fg:#f2efe9; color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font:15px/1.4 var(--sans);-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--head)}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 input,select,textarea{font:inherit;color:var(--fg)}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .app{max-width:520px;margin:0 auto;min-height:100%;padding-bottom:calc(var(--tab) + 24px + env(safe-area-inset-bottom,0px))}
 .wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);padding-block:12px 8px;display:flex;align-items:center;gap:10px}
-.top h1{font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0;flex:1}
+.top h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:0;flex:1}
 .top .sub{font-size:13px;color:var(--fg2)}
-h2.sec{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--fg2);margin:22px 0 8px}
-.card{background:var(--card);border-radius:var(--r);border:1px solid var(--line);padding:14px}
+h2.sec{display:flex;align-items:center;gap:8px;font:700 12px/1 var(--pixel);text-transform:uppercase;letter-spacing:.04em;color:var(--fg);margin:24px 0 10px}
+h2.sec::before{content:"";width:14px;height:14px;border-radius:50%;flex:none;border:2px solid var(--edge);background:linear-gradient(var(--red) 0 42%,var(--edge) 42% 58%,#fff 58%)}
+.card{background:var(--card);border-radius:var(--r);border:2px solid var(--edge);box-shadow:0 3px 0 var(--shadow);padding:14px}
 .stack{display:flex;flex-direction:column;gap:10px}
 .row{display:flex;align-items:center;gap:10px}
 .grow{flex:1;min-width:0}
 .muted{color:var(--fg2)} .faint{color:var(--fg3)} .small{font-size:13px} .tiny{font-size:12px}
 .num{font-variant-numeric:tabular-nums}
 .b{font-weight:600}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:10px;font-weight:600;background:var(--sunk);color:var(--fg);white-space:nowrap}
-.btn.pri{background:var(--red);color:#fff}
-.btn.ok{background:var(--ok);color:#fff}
-.btn.ghost{background:transparent;color:var(--red);padding:0 8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:10px;font-weight:600;background:var(--card);color:var(--fg);white-space:nowrap;border:2px solid var(--edge);box-shadow:0 2px 0 var(--shadow)}
+.btn:active{transform:translateY(2px);box-shadow:none}
+.btn.pri{background:var(--red);color:#fff;border-color:var(--red-d);box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 2px 0 var(--shadow)}
+.btn.ok{background:var(--ok);color:#fff;border-color:#166c3a}
+.btn.ghost{background:transparent;color:var(--red);padding:0 8px;border:0;box-shadow:none}
 .btn.sm{height:32px;padding:0 12px;font-size:14px;border-radius:8px}
 .btn.wide{width:100%;height:48px;font-size:16px}
 .btn.danger{color:var(--red)}
 .btn:disabled{opacity:.45}
-.chip{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:var(--sunk);font-size:13px;font-weight:500}
-.tp{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.03em;padding:2px 7px;border-radius:5px;color:#fff;text-transform:uppercase}
-.bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
-.bar>i{display:block;height:100%;background:var(--blue);border-radius:3px;transition:width .5s ease}
-.hp>i{background:var(--ok)} .hp.mid>i{background:#d9a400} .hp.low>i{background:var(--red)}
-.list{background:var(--card);border-radius:var(--r);border:1px solid var(--line);overflow:hidden}
+.chip{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:var(--sunk);font-size:13px;font-weight:500;border:1.5px solid var(--line2)}
+.tp{display:inline-block;font:700 10px/1 var(--pixel);letter-spacing:.02em;padding:4px 7px 3px;border-radius:5px;color:#fff;text-transform:uppercase;border:1.5px solid rgba(0,0,0,.28);text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.bar{height:10px;border-radius:6px;background:var(--sunk);overflow:hidden;border:2px solid var(--edge)}
+.bar>i{display:block;height:100%;background:var(--xp);border-radius:3px;transition:width .5s ease;box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
+.hp>i{background:var(--hp)} .hp.mid>i{background:#d9a400} .hp.low>i{background:var(--red)}
+.list{background:var(--card);border-radius:var(--r);border:2px solid var(--edge);box-shadow:0 3px 0 var(--shadow);overflow:hidden}
 .li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line);min-height:52px;width:100%;text-align:left}
 .li:first-child{border-top:0}
 .chev{color:var(--fg3);font-size:18px}
 input.f,select.f,textarea.f{width:100%;height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line2);background:var(--card)}
 textarea.f{height:auto;padding:10px 12px;min-height:72px}
 label.l{display:block;font-size:13px;color:var(--fg2);margin:12px 0 6px}
-.seg{display:flex;background:var(--sunk);border-radius:10px;padding:3px;gap:2px}
+.seg{display:flex;background:var(--sunk);border-radius:12px;padding:3px;gap:3px;border:2px solid var(--edge)}
 .seg button{flex:1;height:32px;border-radius:8px;font-size:14px;font-weight:500;color:var(--fg2)}
-.seg button.on{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg button.on{background:var(--red);color:#fff;font-weight:700;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
 /* tabs */
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:3px solid var(--edge);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
 .tabs .in{max-width:520px;margin:0 auto;display:flex;height:var(--tab)}
-.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:500;color:var(--fg3)}
+.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:600;color:var(--fg3)}
 .tabs button.on{color:var(--red)}
+.tabs button.on svg{background:var(--red-bg);border-radius:10px;padding:2px 8px;width:44px;box-sizing:content-box;margin:-2px 0}
 .tabs svg{width:24px;height:24px}
 .resume{position:fixed;left:0;right:0;bottom:calc(var(--tab) + env(safe-area-inset-bottom,0px));z-index:29;display:flex;justify-content:center;pointer-events:none;padding:0 12px 8px}
 .resume button{pointer-events:auto;max-width:496px;width:100%;height:46px;border-radius:12px;background:var(--red);color:#fff;font-weight:600;display:flex;align-items:center;justify-content:space-between;padding:0 16px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
@@ -87,7 +93,7 @@ label.l{display:block;font-size:13px;color:var(--fg2);margin:12px 0 6px}
 .layer{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .layer .inner{max-width:520px;margin:0 auto;padding-bottom:120px}
 .scrim{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.42);display:flex;align-items:flex-end;justify-content:center;animation:fade .15s ease}
-.sheet{background:var(--bg);width:100%;max-width:520px;max-height:92%;overflow-y:auto;border-radius:16px 16px 0 0;padding:8px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:up .2s ease}
+.sheet{background:var(--bg);border-top:3px solid var(--edge);width:100%;max-width:520px;max-height:92%;overflow-y:auto;border-radius:16px 16px 0 0;padding:8px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:up .2s ease}
 .sheet .grab{width:38px;height:5px;border-radius:3px;background:var(--line2);margin:0 auto 10px}
 .sheet h3{font-size:19px;margin:4px 0 12px}
 .center{text-align:center}
@@ -97,15 +103,17 @@ label.l{display:block;font-size:13px;color:var(--fg2);margin:12px 0 6px}
 /* sprite */
 .spr{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none}
 .spr img{width:100%;height:100%;image-rendering:pixelated;object-fit:contain}
+.spr.fit{display:block;overflow:hidden}
+.spr.fit img{position:absolute;max-width:none;object-fit:fill}
 .spr .fb{width:78%;height:78%;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;letter-spacing:-.02em;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
 .egg{width:34px;height:44px;border-radius:50% 50% 46% 46%/60% 60% 40% 40%;position:relative;border:2px solid rgba(0,0,0,.12)}
 .egg.common{background:#f2ead8} .egg.uncommon{background:#cfe6d4} .egg.rare{background:#f4d58a}
 .egg::after{content:"";position:absolute;width:9px;height:7px;border-radius:50%;background:rgba(0,0,0,.14);left:7px;top:12px;box-shadow:12px 8px 0 rgba(0,0,0,.14),3px 20px 0 rgba(0,0,0,.12)}
 /* logger */
 .lhead{position:sticky;top:0;z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
-.exc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-top:12px;overflow:hidden}
+.exc{background:var(--card);border:2px solid var(--edge);box-shadow:0 3px 0 var(--shadow);border-radius:var(--r);margin-top:12px;overflow:hidden}
 .exc .hd{display:flex;align-items:flex-start;gap:8px;padding:12px 12px 6px 14px}
-.exc .nm{font-size:17px;font-weight:650;color:var(--blue);text-align:left}
+.exc .nm{font-size:17px;font-weight:750;color:var(--fg);text-align:left;text-decoration:underline;text-decoration-color:var(--red);text-decoration-thickness:2px;text-underline-offset:4px}
 .hint{margin:0 14px 6px;font-size:13px;color:var(--ok);background:var(--ok-bg);border-radius:8px;padding:6px 10px}
 .sr{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 44px;align-items:center;gap:6px;padding:0 10px}
 .sr.h{font-size:11px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.05em;height:24px}
@@ -133,7 +141,7 @@ label.l{display:block;font-size:13px;color:var(--fg2);margin:12px 0 6px}
 .rest.over{background:var(--ok-bg)}
 /* calendar */
 .wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-.dc{border-radius:10px;padding:6px 2px;min-height:58px;display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--card);border:1px solid var(--line)}
+.dc{border-radius:10px;padding:6px 2px;min-height:58px;display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--card);border:2px solid var(--line2)}
 .dc .d{font-size:15px;font-weight:600}
 .dc.today .d{color:var(--red)}
 .dc.sel{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
@@ -144,7 +152,6 @@ label.l{display:block;font-size:13px;color:var(--fg2);margin:12px 0 6px}
 .paste{position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px);z-index:15;background:var(--blue);color:#fff;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:14px}
 /* battle */
 .arena{background:linear-gradient(#cfe6f7,#e7f2dc);border-radius:var(--r);padding:12px;position:relative;height:250px;overflow:hidden;border:1px solid var(--line)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .arena{background:linear-gradient(#1b2633,#1c2a1c)}}
 :root[data-theme="dark"] .arena{background:linear-gradient(#1b2633,#1c2a1c)}
 .plate{background:var(--card);border-radius:10px;padding:8px 10px;width:58%;border:1px solid var(--line)}
 .msg{min-height:64px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;font-size:16px;font-weight:500;margin-top:10px;display:flex;align-items:center}
@@ -152,9 +159,9 @@ label.l{display:block;font-size:13px;color:var(--fg2);margin:12px 0 6px}
 .mv{border-radius:10px;padding:10px;text-align:left;border:1px solid var(--line2);background:var(--card);min-height:58px}
 .mv:disabled{opacity:.4}
 .stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.tile{background:var(--card);border:2px solid var(--edge);border-radius:var(--r);padding:10px 12px;box-shadow:0 3px 0 var(--shadow)}
 .tile .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
-.tile .k{font-size:12px;color:var(--fg2)}
+.tile .k{font:700 10px/1.2 var(--pixel);text-transform:uppercase;color:var(--fg2);margin-bottom:2px}
 .badge{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex:none}
 .badge.off{background:var(--sunk)!important;color:var(--fg3)}
 .toast{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);z-index:90;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;max-width:90%;animation:up .2s ease}
@@ -167,6 +174,146 @@ label.l{display:block;font-size:13px;color:var(--fg2);margin:12px 0 6px}
 ol.steps{padding-left:20px;margin:6px 0}
 ol.steps li{margin:6px 0}
 .empty{padding:22px 16px;text-align:center;color:var(--fg2)}
+/* Pokédex header band on the main tabs */
+.app .top{margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px))) 14px;padding:14px max(16px,env(safe-area-inset-left,0px)) 14px;background:var(--head);color:var(--head-fg);border-bottom:4px solid var(--edge);top:env(safe-area-inset-top,0px)}
+.app .top .sub{color:color-mix(in srgb,var(--head-fg) 82%,transparent)}
+.app .top .btn{background:rgba(255,255,255,.16);color:var(--head-fg);border-color:rgba(0,0,0,.25);box-shadow:none}
+.app .top .lens{width:34px;height:34px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 35%,#b8e6ff 0 18%,#3fa9f5 19% 60%,#1b6fb8 61%);border:3px solid #fff;box-shadow:0 0 0 2px var(--edge)}
+.app .top .leds{display:flex;gap:5px;align-self:flex-start;margin-top:4px}
+.app .top .leds i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--edge)}
+/* home: active partner */
+.hero{position:relative;width:100%;text-align:left;display:grid;grid-template-columns:150px 1fr;align-items:center;gap:12px;padding:12px 14px 14px;overflow:hidden}
+.hero .stage{position:relative;height:150px;display:flex;align-items:flex-end;justify-content:center}
+.hero .stage::before{content:"";position:absolute;left:8px;right:8px;bottom:6px;height:22px;border-radius:50%;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--fg) 18%,transparent),transparent 70%)}
+.hero .tag{font:700 10px/1 var(--pixel);text-transform:uppercase;color:var(--red);letter-spacing:.03em}
+.hero .nm{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:6px 0 6px}
+.lvtag{font:700 13px/1 var(--pixel);color:var(--fg)}
+.expl{display:flex;align-items:center;gap:6px;margin-top:10px}
+.expl b{font:700 10px/1 var(--pixel);color:var(--fg2)}
+.expl .bar{flex:1}
+/* home: the rest of the party */
+.party5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:10px}
+.pslot{background:var(--card);border:2px solid var(--edge);border-radius:12px;box-shadow:0 3px 0 var(--shadow);padding:6px 5px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.pslot .spr{margin-top:2px}
+.pslot .lv{font:700 10px/1 var(--pixel);color:var(--fg)}
+.pslot .bar{width:100%;height:7px;border-width:1.5px}
+.pslot.empty{background:transparent;border-style:dashed;border-color:var(--line2);box-shadow:none;justify-content:center;min-height:96px}
+.pslot.empty i{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);background:linear-gradient(var(--line) 0 44%,var(--line2) 44% 56%,transparent 56%)}
+.app .top .muted,.app .top .small{color:color-mix(in srgb,var(--head-fg) 85%,transparent)}
+.app .top .chip{background:rgba(255,255,255,.18);color:var(--head-fg);border-color:rgba(0,0,0,.2)}
+.app .top .seg{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.3)}
+.app .top .seg button{color:color-mix(in srgb,var(--head-fg) 80%,transparent)}
+.app .top .seg button.on{background:#fff;color:var(--red-d)}
+:root[data-theme="dark"] .app .top .seg button.on{background:var(--red);color:#fff}
+/* progress chart */
+.ct-big{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.ct-big span{font-size:14px;font-weight:600;color:var(--fg2)}
+.ct-ax{font:500 10.5px var(--sans);fill:var(--fg2)}
+.ct-at{font:600 10.5px var(--sans);fill:var(--fg)}
+.ct-lab{font:700 11px var(--sans);fill:var(--fg)}
+.ct-tip{font:500 10.5px var(--sans);fill:var(--bg)}
+.ct-tip.b{font-weight:700;font-size:12px}
+.ct-key{display:flex;gap:14px;flex-wrap:wrap;padding:4px 4px 0}
+.ct-key span{display:inline-flex;align-items:center;gap:6px}
+.ct-key i{display:inline-block;width:18px;height:0;border-top:2px solid var(--red)}
+.ct-key i.k-dash{border-top-style:dashed}
+.ct .seg button{height:28px;font-size:12.5px}
+/* battle: classic handheld layout */
+.battle-layer{background:#1c1d22}
+.battle-layer .inner{max-width:520px}
+.bt-head{display:flex;align-items:center;gap:10px;padding:10px max(16px,env(safe-area-inset-left,0px));color:#f2f2f2}
+.bt-head .tiny{color:#b9bcc4}
+.bt-head .btn{background:transparent;color:#fff;border-color:#55575f;box-shadow:none}
+.arena2{position:relative;height:clamp(320px,50vh,440px);overflow:hidden;border-top:3px solid #000;border-bottom:3px solid #000;
+  background:linear-gradient(180deg,#bfe3f7 0%,#e6f4fb 46%,#cdeab0 46.2%,#a9d67f 100%)}
+.arena2.t-water{background:linear-gradient(180deg,#a9d4f5 0%,#dcefff 46%,#9fd0e8 46.2%,#6fb2d6 100%)}
+.arena2.t-fire,.arena2.t-rock,.arena2.t-ground{background:linear-gradient(180deg,#f6dcb8 0%,#fbefdc 46%,#e0c79a 46.2%,#c9a76a 100%)}
+.arena2.t-psychic,.arena2.t-poison{background:linear-gradient(180deg,#e2d4f3 0%,#f3ecfb 46%,#d6c4ea 46.2%,#b79ad6 100%)}
+.arena2.t-electric{background:linear-gradient(180deg,#fff2b5 0%,#fffbe3 46%,#e3e3a6 46.2%,#c6c776 100%)}
+:root[data-theme="dark"] .arena2{filter:brightness(.82) saturate(.9)}
+.pad{position:absolute;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,rgba(255,255,255,.55),rgba(0,0,0,.08) 60%,rgba(0,0,0,.18) 72%,transparent 73%)}
+.foe-pad{right:4%;top:40%;width:48%;height:14%}
+.me-pad{left:-6%;bottom:-2%;width:58%;height:18%}
+.mon{position:absolute;z-index:2}
+.mon.foe{right:calc(4% + 24% - 64px);top:calc(40% + 7% - 112px)}
+.mon.me{left:2px;bottom:calc(-2% + 7%)}
+.mon .spr{filter:drop-shadow(0 2px 0 rgba(0,0,0,.08))}
+.mon.enter.foe{animation:inR .45s ease-out}
+.mon.enter.me{animation:inL .45s ease-out}
+.mon.hit{animation:hit .5s steps(2,end)}
+.mon.lunge.me{animation:lungeMe .35s ease}
+.mon.lunge.foe{animation:lungeFoe .35s ease}
+.mon.faint{animation:faint .6s ease-in forwards}
+@keyframes inR{from{transform:translateX(120%);opacity:0}to{transform:none;opacity:1}}
+@keyframes inL{from{transform:translateX(-120%);opacity:0}to{transform:none;opacity:1}}
+@keyframes hit{0%,50%{opacity:.15}25%,75%{opacity:1}100%{opacity:1}}
+@keyframes lungeMe{50%{transform:translate(18px,-10px)}}
+@keyframes lungeFoe{50%{transform:translate(-18px,10px)}}
+@keyframes faint{to{transform:translateY(60%);opacity:0;clip-path:inset(0 0 60% 0)}}
+.hpbox{position:absolute;z-index:3;width:min(58%,230px);background:#fbfbf3;color:#1a1a1a;border:3px solid #2b2b2b;border-radius:10px 4px 10px 4px;padding:6px 10px 6px;box-shadow:3px 3px 0 rgba(0,0,0,.25)}
+.hpbox.foe{left:10px;top:12px}
+.hpbox.me{right:10px;bottom:calc(16% + 4px)}
+.hb-top{display:flex;align-items:baseline;gap:6px}
+.hb-nm{font-weight:800;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase;letter-spacing:.01em}
+.hb-lv{font:700 12px/1 var(--pixel)}
+.hb-st{font:700 9px/1 var(--pixel);background:#c9a227;color:#fff;padding:3px 4px;border-radius:3px}
+.hb-bar{display:flex;align-items:center;gap:4px;margin-top:4px;background:#4a4a4a;border-radius:6px;padding:2px 3px 2px 5px}
+.hb-bar b{font:700 9px/1 var(--pixel);color:#f6c443}
+.hb-track{flex:1;height:7px;background:#e6e6e6;border-radius:4px;overflow:hidden}
+.hb-track i{display:block;height:100%;background:#47d46b;transition:width .7s ease,background .3s}
+.hb-track.mid i{background:#f2c230} .hb-track.low i{background:#ec4b3c}
+.hb-bot{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.hb-num{font:700 12px/1 var(--pixel)}
+.hb-balls{display:flex;gap:3px}
+.hb-balls i{width:9px;height:9px;border-radius:50%;border:1.5px solid #2b2b2b;background:linear-gradient(#e3350d 0 45%,#2b2b2b 45% 58%,#fff 58%)}
+.hb-balls i.out{background:#9a9a9a;opacity:.6}
+.bt-ui{display:flex;gap:0;background:#2b2d33;padding:8px;border-bottom:3px solid #000}
+.dlg{flex:1;min-height:92px;text-align:left;background:#fbfbf3;color:#1a1a1a;border:4px solid #c9372c;outline:3px solid #fbfbf3;outline-offset:-10px;border-radius:10px;padding:14px 16px;font-size:17px;font-weight:600;line-height:1.35;position:relative}
+.dlg.half{flex:1.25}
+.dlg-t{display:block;animation:typein .35s steps(12,end)}
+@keyframes typein{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.dlg-next{position:absolute;right:12px;bottom:10px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #c9372c;animation:bob .8s infinite}
+@keyframes bob{50%{transform:translateY(3px)}}
+.cmd{flex:1;display:grid;grid-template-columns:1fr;gap:5px;margin-left:8px;background:#fbfbf3;border:4px solid #4a4d57;border-radius:10px;padding:6px}
+.cmd button{font:700 13px/1 var(--pixel);text-transform:uppercase;color:#1a1a1a;text-align:left;padding:8px 8px 8px 22px;border-radius:6px;position:relative}
+.cmd button::before{content:"";position:absolute;left:8px;top:50%;margin-top:-5px;border-left:7px solid #1a1a1a;border-top:5px solid transparent;border-bottom:5px solid transparent;opacity:0}
+.cmd button:hover::before,.cmd button:focus-visible::before{opacity:1}
+.cmd .c-fight{background:#e3350d;color:#fff}
+.cmd .c-fight::before{border-left-color:#fff;opacity:1}
+.cmd button:disabled{opacity:.35}
+.mvg2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.mv2{position:relative;text-align:left;background:var(--card);border:3px solid var(--edge);border-left:10px solid var(--tc);border-radius:10px;padding:10px 10px 10px 10px;min-height:76px;display:flex;flex-direction:column;gap:6px;box-shadow:0 3px 0 var(--shadow)}
+.mv2:active{transform:translateY(2px);box-shadow:none}
+.mv2:disabled{opacity:.4}
+.mv-n{font-weight:800;font-size:16px;line-height:1.1}
+.mv-m{display:flex;align-items:center;justify-content:space-between;gap:6px;font:700 10px/1 var(--pixel);color:var(--fg2)}
+.mv-e{font-size:11.5px;font-weight:600;color:var(--fg3)}
+.mv-e.good{color:var(--ok)}
+.battle-layer .card,.battle-layer .list{margin-top:12px}
+.battle-layer .wrap{padding-top:2px}
+/* professor */
+.prof{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;max-width:520px;margin:0 auto;position:relative;
+  background:radial-gradient(120% 60% at 50% 30%,#ffffff 0%,var(--bg) 70%)}
+:root[data-theme="dark"] .prof{background:radial-gradient(120% 60% at 50% 30%,#2a2826 0%,var(--bg) 70%)}
+.prof-layer{background:var(--bg)}
+.prof-top{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 0}
+.prof-brand{font:700 13px/1 var(--pixel);color:var(--red);letter-spacing:.04em}
+.prof-stage{flex:1;position:relative;display:flex;align-items:flex-end;justify-content:center;min-height:260px;padding-top:8px}
+.prof-img{position:relative;z-index:1;height:min(56vh,480px);width:auto;max-width:94%;object-fit:contain;animation:profIn .5s ease-out;filter:drop-shadow(0 6px 0 rgba(0,0,0,.08))}
+.prof-stage.small{flex:1 0 auto;min-height:0}
+.prof-dlg:has(.dlg-go){padding-bottom:50px}
+.prof-stage.small .prof-img{height:min(30vh,250px)}
+.prof-floor{position:absolute;bottom:-14px;left:50%;width:70%;height:44px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--fg) 16%,transparent),transparent 70%)}
+@keyframes profIn{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.prof-extra{padding:16px 16px 0;position:relative;z-index:2}
+.prof-dlg-wrap{padding:14px 12px calc(env(safe-area-inset-bottom,0px) + 14px);position:relative;z-index:2}
+.prof-dlg{width:100%;min-height:118px;padding-top:22px}
+.prof-dlg:disabled{opacity:1}
+.dlg-name{position:absolute;left:14px;top:-14px;font:700 11px/1 var(--pixel);background:#c9372c;color:#fff;padding:6px 9px 5px;border-radius:6px;border:2px solid #fbfbf3;letter-spacing:.03em}
+.dlg-go{position:absolute;right:12px;bottom:10px;font:700 12px/1 var(--pixel);color:#fff;background:#e3350d;padding:7px 10px 6px;border-radius:6px;text-transform:uppercase}
+.starters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.starter{display:flex;flex-direction:column;align-items:center;padding:10px 4px 12px}
+.starter.on{border-color:var(--red);box-shadow:0 0 0 3px var(--red-bg),0 3px 0 var(--shadow);transform:translateY(-3px)}
 </style>
 
 </head><body>
@@ -895,17 +1042,44 @@ const TYPE_COL = { Normal:"#9a9a78", Fire:"#e8732c", Water:"#4d84e6", Electric:"
   Ground:"#cba04c", Flying:"#8b7ae0", Psychic:"#ec4f7d", Bug:"#93a81a", Rock:"#a8902e", Ghost:"#6a5694", Dragon:"#6a3cf0", Dark:"#6b5446", Steel:"#9a9ab6" };
 let SPRITES_OK = true;
 const SPR = (sp, back, shiny) => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${back ? "back/" : ""}${shiny ? "shiny/" : ""}${sp}.png`;
-function Sprite({ sp, size = 64, back = false, shiny = false }) {
+const TRIM = {}; const TRIM_WAIT = {};
+function trimBox(src) {
+  if (TRIM[src] !== undefined) return Promise.resolve(TRIM[src]);
+  return TRIM_WAIT[src] || (TRIM_WAIT[src] = new Promise(res => {
+    const im = new Image(); im.crossOrigin = "anonymous";
+    im.onload = () => { try {
+        const W = im.naturalWidth, H = im.naturalHeight, c = document.createElement("canvas"); c.width = W; c.height = H;
+        const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, W, H).data;
+        let x0 = W, y0 = H, x1 = -1, y1 = -1;
+        for (let y = 0; y < H; y++) for (let k = 0; k < W; k++) if (d[(y * W + k) * 4 + 3] > 8) { if (k < x0) x0 = k; if (k > x1) x1 = k; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        TRIM[src] = x1 < 0 ? null : { W, H, x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+      } catch (e) { TRIM[src] = null; } res(TRIM[src]); };
+    im.onerror = () => { TRIM[src] = null; res(null); };
+    im.src = src; }));
+}
+// size = the square slot in px. The visible creature is scaled (in whole-ish steps) to fill it, bottom-aligned so it "stands".
+function Sprite({ sp, size = 64, back = false, shiny = false, fill = .92 }) {
   const [bad, setBad] = useState(!SPRITES_OK);
-  const m = PL.mon(sp); const t = m.t;
+  const src = SPR(sp, back, shiny);
+  const [box, setBox] = useState(TRIM[src]);
+  useEffect(() => { let on = true; if (TRIM[src] === undefined) trimBox(src).then(b => on && setBox(b)); else setBox(TRIM[src]); return () => { on = false; }; }, [src]);
+  const m = PL.mon(sp); const t = m.t; const label = (shiny ? "Shiny " : "") + m.n;
   const bg = t.length > 1 ? `linear-gradient(135deg,${TYPE_COL[t[0]]} 50%,${TYPE_COL[t[1]]} 50%)` : TYPE_COL[t[0]];
-  return html`<span class="spr" style=${`width:${size}px;height:${size}px`} title=${(shiny ? "Shiny " : "") + m.n}>
-    ${bad ? html`<span class="fb" style=${`background:${bg};font-size:${Math.round(size * .3)}px`}>${m.n.replace(/[^A-Za-z]/g, "").slice(0, 2)}</span>`
-          : html`<img src=${SPR(sp, back, shiny)} alt=${(shiny ? "Shiny " : "") + m.n} loading="lazy" onError=${() => { SPRITES_OK = false; setBad(true); }} />`}
+  let body;
+  if (bad) body = html`<span class="fb" style=${`background:${bg};font-size:${Math.round(size * .3)}px`}>${m.n.replace(/[^A-Za-z]/g, "").slice(0, 2)}</span>`;
+  else if (box) {
+    const k = size * fill / Math.max(box.w, box.h);
+    const left = (size - box.w * k) / 2 - box.x0 * k, top = size - box.h * k - box.y0 * k - size * (1 - fill) / 4;
+    body = html`<img src=${src} alt=${label} style=${`width:${box.W * k}px;height:${box.H * k}px;left:${left}px;top:${top}px`} onError=${() => { SPRITES_OK = false; setBad(true); }} />`;
+  } else body = html`<img src=${src} alt=${label} style="opacity:0" onError=${() => { SPRITES_OK = false; setBad(true); }} />`;
+  return html`<span class=${"spr" + (box && !bad ? " fit" : "")} style=${`width:${size}px;height:${size}px`} title=${label}>${body}
     ${shiny && html`<span class="star" aria-hidden="true">✦</span>`}</span>`;
 }
 const TypePill = ({ t }) => html`<span class="tp" style=${`background:${TYPE_COL[t] || "#888"}`}>${t}</span>`;
 const Bar = ({ pct, cls = "" }) => html`<div class=${"bar " + cls}><i style=${`width:${Math.max(0, Math.min(100, pct * 100))}%`}></i></div>`;
+function setTheme(t) { document.documentElement.dataset.theme = t; try { localStorage.setItem("pl.theme", t); } catch (e) {}
+  const mc = document.querySelector('meta[name="theme-color"]'); if (mc) mc.setAttribute("content", t === "dark" ? "#1d1c1a" : "#e3350d"); go(); }
+const curTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 const ShinyTag = ({ m }) => m && m.shiny ? html` <span class="shiny-tag" title="Shiny">✦</span>` : null;
 
 const IC = {
@@ -941,13 +1115,17 @@ function Home() {
   const gi = currentGym(); const gym = PL.GYMS[gi]; const allBadges = g.badges.g7;
   let nextOpp = 0; while (nextOpp < 3 && oppUnlocked(gi, nextOpp + 1)) nextOpp++;
   return html`<div class="wrap">
-    <div class="top"><div class="grow"><div class="sub">${fmtDate(Date.now(), { weekday: "long", month: "long", day: "numeric" })}</div><h1>PokéLift</h1></div>
+    <div class="top"><span class="lens" aria-hidden="true"></span><div class="grow"><div class="sub">${fmtDate(Date.now(), { weekday: "long", month: "long", day: "numeric" })}</div><h1>PokéLift</h1></div>
+      <span class="leds" aria-hidden="true"><i style="background:#ff5a4e"></i><i style="background:#ffd23f"></i><i style="background:#4cd07d"></i></span>
       <button aria-label="Settings" class="btn sm" onClick=${() => openSheet(Settings)}>${IC.gear}</button></div>
-    ${a && html`<button class="card row" style="width:100%;text-align:left;gap:14px" onClick=${() => openSheet(MonSheet, { uid: a.uid })}>
-      <${Sprite} sp=${a.sp} size=${84} shiny=${a.shiny} />
-      <div class="grow"><div class="tiny faint b" style="text-transform:uppercase;letter-spacing:.06em">Active · gets full XP</div>
-        <div class="row" style="gap:8px;margin:2px 0 6px"><span style="font-size:20px;font-weight:700">${monName(a)}<${ShinyTag} m=${a} /></span><span class="muted num">Lv ${a.lv}</span></div>
-        <${Bar} pct=${PL.xpProgress(a).pct} /><div class="tiny muted num" style="margin-top:4px">${a.lv >= 100 ? "Max level" : PL.xpProgress(a).toNext.toLocaleString() + " XP to Lv " + (a.lv + 1)}</div></div></button>`}
+    ${a && html`<button class="card hero" onClick=${() => openSheet(MonSheet, { uid: a.uid })}>
+      <div class="stage"><${Sprite} sp=${a.sp} size=${146} shiny=${a.shiny} /></div>
+      <div style="min-width:0"><div class="tag">Active · full XP</div>
+        <div class="nm">${monName(a)}<${ShinyTag} m=${a} /></div>
+        <div class="row" style="gap:6px;flex-wrap:wrap"><span class="lvtag">Lv${a.lv}</span>${PL.mon(a.sp).t.map(t => html`<${TypePill} t=${t} />`)}</div>
+        <div class="expl"><b>EXP</b><${Bar} pct=${PL.xpProgress(a).pct} /></div>
+        <div class="tiny muted num" style="margin-top:5px">${a.lv >= 100 ? "Max level" : PL.xpProgress(a).toNext.toLocaleString() + " XP to Lv " + (a.lv + 1)}</div></div></button>
+      <${PartyRow} g=${g} />`}
     <h2 class="sec">Today</h2>
     <div class="stack">
       ${today.map(e => { const t = tpl(e.tpl); const done = S.sessions.some(s => s.sched === e.id);
@@ -969,6 +1147,15 @@ function Home() {
       ${g.bank > 0 && html`<button class="card row" style="width:100%;text-align:left" onClick=${() => { U.tab = "team"; U.teamSeg = "party"; go(); }}><div class="grow"><div class="b">XP Bank</div><div class="small muted num">${fmtLv(g.bank)} ready to give to any Pokémon</div></div><span class="chev">›</span></button>`}
     </div>
   </div>`;
+}
+
+function PartyRow({ g }) {
+  const rest = g.party.filter(u => u !== g.active).map(monOf).filter(Boolean);
+  const slots = Array.from({ length: 5 }, (_, i) => rest[i] || null);
+  return html`<div class="party5">${slots.map(m => m
+    ? html`<button class="pslot" aria-label=${`${monName(m)}, level ${m.lv}`} onClick=${() => openSheet(MonSheet, { uid: m.uid })}>
+        <${Sprite} sp=${m.sp} size=${52} shiny=${m.shiny} /><span class="lv">Lv${m.lv}</span><${Bar} pct=${PL.xpProgress(m).pct} /></button>`
+    : html`<button class="pslot empty" aria-label="Empty party slot" onClick=${() => { U.tab = "team"; U.teamSeg = "box"; go(); }}><i></i></button>`)}</div>`;
 }
 
 /* ---------------- Plan (calendar) ---------------- */
@@ -1124,24 +1311,90 @@ function ExerciseHistory({ id }) {
   const load = (s, bw) => PL.setLoad(e, s, bw);
   const pts = [...rows].reverse().map(r => ({ d: r.date, v: Math.max(0, ...r.sets.map(s => PL.e1rm(load(s, r.bw), +s.r || 0))) })).filter(p => p.v > 0);
   let best = null; for (const r of rows) for (const s of r.sets) { const v = PL.e1rm(load(s, r.bw), +s.r || 0); if (!best || v > best.v) best = { v, s, d: r.date }; }
-  const W = 320, H = 120, P = 6;
-  const mn = pts.length ? Math.min(...pts.map(p => p.v)) : 0, mx = pts.length ? Math.max(...pts.map(p => p.v)) : 1;
-  const xy = (p, i) => [P + (pts.length > 1 ? i / (pts.length - 1) : .5) * (W - 2 * P), H - P - (mx === mn ? .5 : (p.v - mn) / (mx - mn)) * (H - 2 * P)];
-  const path = pts.map((p, i) => (i ? "L" : "M") + xy(p, i).map(n => n.toFixed(1)).join(" ")).join("");
   const isLoad = e.kind === "weight" || e.kind === "bw";
   return html`<${Sheet} title=${e.name}>
     <div class="row" style="gap:8px;margin-top:-6px;margin-bottom:12px"><span class="chip">${e.muscle || "Exercise"}</span>${e.kind === "bw" && html`<span class="chip">Bodyweight ${Math.round(e.mod * 100)}%</span>`}
       <span class="grow"></span><button class="btn sm" onClick=${() => openSheet(NewExercise, { id })}>Edit</button></div>
     ${isLoad && best && html`<div class="stat-grid" style="grid-template-columns:1fr 1fr"><div class="tile"><div class="k">Best set</div><div class="v">${setStr(e, best.s)}</div><div class="tiny muted">${fmtDate(best.d)}</div></div>
       <div class="tile"><div class="k">Est. 1-rep max</div><div class="v">${Math.round(best.v)}<span class="small muted"> lb</span></div><div class="tiny muted">Epley formula</div></div></div>`}
-    ${isLoad && pts.length > 1 && html`<h2 class="sec">Est. 1RM over time</h2><div class="card" style="padding:10px"><svg viewBox=${`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Estimated one-rep max trend">
-      <path d=${path + `L${xy(pts[pts.length - 1], pts.length - 1)[0]} ${H}L${P} ${H}Z`} fill="var(--blue)" opacity=".1"/><path d=${path} fill="none" stroke="var(--blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      ${(() => { const [x, y] = xy(pts[pts.length - 1], pts.length - 1); return html`<circle cx=${x} cy=${y} r="4" fill="var(--blue)" stroke="var(--card)" stroke-width="2"/>`; })()}</svg>
-      <div class="row tiny muted num"><span class="grow">${fmtDate(pts[0].d, { month: "short", day: "numeric" })} · ${Math.round(mn)} lb</span><span>${Math.round(mx)} lb</span></div></div>`}
+    ${isLoad && pts.length > 0 && html`<h2 class="sec">Strength progress</h2><${E1RMChart} pts=${pts} />`}
     <h2 class="sec">History</h2>
     ${rows.length ? html`<div class="list">${rows.map(r => html`<div class="li" style="align-items:flex-start"><div class="small b" style="width:84px;flex:none">${fmtDate(r.date, { month: "short", day: "numeric" })}</div>
       <div class="grow small num">${r.all.map(s => html`<span class="chip" style=${"margin:0 4px 4px 0;" + (s.warm ? "opacity:.6" : "")}>${s.warm ? "W " : ""}${setStr(e, s)}</span>`)}</div></div>`)}</div>`
       : html`<div class="card empty small">No sets logged yet.</div>`}<//>`;
+}
+/* Estimated 1RM chart: last 3 months + 3-month projection, or all time. Swipe or toggle to switch. */
+const DAY = 864e5;
+function niceStep(span, n) { const raw = span / n, m = Math.pow(10, Math.floor(Math.log10(raw))); for (const k of [1, 2, 2.5, 5, 10]) if (k * m >= raw) return k * m; return 10 * m; }
+function fitTrend(pts) { // least squares on lb vs day; returns {a, b} with value = a + b*day
+  const n = pts.length, xs = pts.map(p => p.d / DAY), mx = xs.reduce((a, b) => a + b, 0) / n, my = pts.reduce((a, p) => a + p.v, 0) / n;
+  let sxx = 0, sxy = 0; xs.forEach((x, i) => { sxx += (x - mx) ** 2; sxy += (x - mx) * (pts[i].v - my); });
+  const b = sxx ? sxy / sxx : 0; return { a: my - b * mx, b };
+}
+function E1RMChart({ pts }) {
+  const [range, setRange] = useState("3m"); const [hi, setHi] = useState(null); const sw = useRef(null);
+  const now = Date.now(), last = pts[pts.length - 1];
+  // projection from the last ~3 months of sessions (needs 3+ sessions over 2+ weeks); weekly change capped at ±2% of the current estimate
+  const recent = pts.filter(p => p.d >= now - 90 * DAY);
+  let proj = null;
+  if (recent.length >= 3 && recent[recent.length - 1].d - recent[0].d >= 14 * DAY) {
+    const f = fitTrend(recent), cap = last.v * .02 / 7, b = Math.max(-cap, Math.min(cap, f.b));
+    const v0 = f.a + f.b * (now / DAY); proj = { d0: now, v0, d1: now + 90 * DAY, v1: v0 + b * 90, perWk: b * 7 };
+  }
+  const show = range === "3m" ? (recent.length ? recent : [last]) : pts;
+  const x0 = range === "3m" ? now - 90 * DAY : Math.min(pts[0].d, now - 30 * DAY);
+  const x1 = range === "3m" ? (proj ? proj.d1 : now + 14 * DAY) : now + 7 * DAY;
+  const vals = show.map(p => p.v).concat(range === "3m" && proj ? [proj.v0, proj.v1] : []);
+  let lo = Math.min(...vals), up = Math.max(...vals); const pad = Math.max(5, (up - lo) * .12); lo -= pad; up += pad;
+  const ys = niceStep(up - lo, 4); lo = Math.floor(lo / ys) * ys; up = Math.ceil(up / ys) * ys;
+  const W = 340, H = 232, L = 46, R = 12, T = 14, B = 44;
+  const X = d => L + (d - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - lo) / (up - lo)) * (H - T - B);
+  const yt = []; for (let v = lo; v <= up + 1e-6; v += ys) yt.push(v);
+  // month ticks, thinned so labels never collide
+  const span = (x1 - x0) / (30 * DAY), every = span <= 7 ? 1 : span <= 14 ? 2 : span <= 24 ? 3 : 6;
+  const xt = []; const dd = new Date(x0); dd.setDate(1); dd.setHours(0, 0, 0, 0); dd.setMonth(dd.getMonth() + 1);
+  const multiYear = new Date(x0).getFullYear() !== new Date(x1).getFullYear();
+  for (; dd.getTime() <= x1; dd.setMonth(dd.getMonth() + every)) xt.push(dd.getTime());
+  const mlab = t => { const d = new Date(t); const m = d.toLocaleDateString(undefined, { month: "short" }); return multiYear && (d.getMonth() === 0 || t === xt[0]) ? `${m} ’${String(d.getFullYear()).slice(2)}` : m; };
+  const line = show.map((p, i) => (i ? "L" : "M") + X(p.d).toFixed(1) + " " + Y(p.v).toFixed(1)).join("");
+  const first = show[0]; const gain = last.v - first.v;
+  const pick = ev => { const r = ev.currentTarget.getBoundingClientRect(); const px = (ev.clientX - r.left) / r.width * W;
+    let best = null, bd = 1e9; show.forEach(p => { const d = Math.abs(X(p.d) - px); if (d < bd) { bd = d; best = p; } }); setHi(bd < 30 ? best : null); };
+  const tStart = e => { sw.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+  const tEnd = e => { const s0 = sw.current; sw.current = null; if (!s0) return; const dx = e.changedTouches[0].clientX - s0.x, dy = e.changedTouches[0].clientY - s0.y;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { setHi(null); setRange(dx < 0 ? "all" : "3m"); } };
+  const fd = (t, o = { month: "short", day: "numeric" }) => fmtDate(t, o);
+  const tip = hi && (() => { const tx = Math.min(Math.max(X(hi.d), L + 58), W - R - 58), ty = Y(hi.v) - 14 < T + 30 ? Y(hi.v) + 14 : Y(hi.v) - 44;
+    return html`<g pointer-events="none"><line x1=${X(hi.d)} x2=${X(hi.d)} y1=${T} y2=${H - B} stroke="var(--fg3)" stroke-width="1"/>
+      <rect x=${tx - 56} y=${ty} width="112" height="34" rx="7" fill="var(--fg)"/><text x=${tx} y=${ty + 14} text-anchor="middle" class="ct-tip b">${Math.round(hi.v)} lb</text>
+      <text x=${tx} y=${ty + 27} text-anchor="middle" class="ct-tip">${fd(hi.d, { month: "short", day: "numeric", year: "numeric" })}</text></g>`; })();
+  return html`<div class="card ct" style="padding:12px 10px 10px">
+    <div class="row" style="gap:8px;padding:0 4px 8px"><div class="grow">
+        <div class="ct-big num">${Math.round(last.v)}<span> lb</span></div>
+        <div class="tiny muted num">${range === "3m" ? (show.length > 1 ? `${gain >= 0 ? "+" : "−"}${Math.abs(Math.round(gain))} lb since ${fd(first.d)}` : "Latest estimate") : `${gain >= 0 ? "+" : "−"}${Math.abs(Math.round(gain))} lb since ${fd(first.d, { month: "short", year: "numeric" })}`}</div></div>
+      <div class="seg" style="width:150px" role="group" aria-label="Time range"><button class=${range === "3m" ? "on" : ""} onClick=${() => { setRange("3m"); setHi(null); }}>3 months</button><button class=${range === "all" ? "on" : ""} onClick=${() => { setRange("all"); setHi(null); }}>All time</button></div></div>
+    <svg viewBox=${`0 0 ${W} ${H}`} width="100%" role="img" style="touch-action:pan-y;display:block" onPointerDown=${pick} onPointerMove=${e => e.buttons || e.pointerType === "mouse" ? pick(e) : null} onPointerLeave=${() => setHi(null)} onTouchStart=${tStart} onTouchEnd=${tEnd}
+      aria-label=${`Estimated one-rep max, ${range === "3m" ? "last 3 months with 3-month projection" : "all time"}. Latest ${Math.round(last.v)} pounds.`}>
+      ${yt.map(v => html`<line x1=${L} x2=${W - R} y1=${Y(v)} y2=${Y(v)} stroke="var(--line)" stroke-width="1"/><text x=${L - 6} y=${Y(v) + 4} text-anchor="end" class="ct-ax">${Math.round(v)}</text>`)}
+      ${xt.map(t => html`<line x1=${X(t)} x2=${X(t)} y1=${H - B} y2=${H - B + 4} stroke="var(--fg3)"/><text x=${X(t)} y=${H - B + 16} text-anchor="middle" class="ct-ax">${mlab(t)}</text>`)}
+      <line x1=${L} x2=${W - R} y1=${H - B} y2=${H - B} stroke="var(--fg3)" stroke-width="1"/>
+      <text transform=${`translate(11 ${(T + H - B) / 2}) rotate(-90)`} text-anchor="middle" class="ct-at">Est. 1RM (lb)</text>
+      <text x=${(L + W - R) / 2} y=${H - 6} text-anchor="middle" class="ct-at">Date</text>
+      ${range === "3m" && proj && html`<rect x=${X(now)} y=${T} width=${X(proj.d1) - X(now)} height=${H - B - T} fill="var(--sunk)" opacity=".6"/>
+        <text x=${(X(now) + X(proj.d1)) / 2} y=${T + 11} text-anchor="middle" class="ct-ax">Projected</text>`}
+      <line x1=${X(now)} x2=${X(now)} y1=${T} y2=${H - B} stroke="var(--fg3)" stroke-width="1" stroke-dasharray="2 3"/>
+      <text x=${X(now)} y=${H - B - 5} text-anchor=${range === "3m" ? "end" : "end"} dx="-4" class="ct-ax">Today</text>
+      ${range === "3m" && proj && html`<path d=${`M${X(last.d)} ${Y(last.v)}L${X(proj.d1)} ${Y(proj.v1)}`} fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>
+        <circle cx=${X(proj.d1)} cy=${Y(proj.v1)} r="4" fill="var(--card)" stroke="var(--red)" stroke-width="2"/>
+        <text x=${X(proj.d1) - 6} y=${Y(proj.v1) + (proj.v1 >= last.v ? -9 : 17)} text-anchor="end" class="ct-lab">~${Math.round(proj.v1)}</text>`}
+      ${show.length > 1 && html`<path d=${line} fill="none" stroke="var(--red)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`}
+      ${(show.length <= 16 ? show : [last]).map(p => html`<circle cx=${X(p.d)} cy=${Y(p.v)} r="3.5" fill="var(--red)"/>`)}
+      ${hi && html`<circle cx=${X(hi.d)} cy=${Y(hi.v)} r="5.5" fill="var(--red)" stroke="var(--card)" stroke-width="2"/>`}
+      ${tip}
+    </svg>
+    <div class="ct-key tiny muted"><span><i class="k-solid"></i>Each workout</span>${range === "3m" && proj && html`<span><i class="k-dash"></i>Projected at your pace</span>`}</div>
+    <p class="tiny muted" style="margin:8px 4px 0">${range === "3m" ? (proj ? html`At your recent pace (${proj.perWk >= 0 ? "+" : "−"}${Math.abs(proj.perWk).toFixed(1)} lb/week) you'd reach about <b class="num" style="color:var(--fg)">${Math.round(proj.v1)} lb</b> by ${fd(proj.d1)}. ` : "Log this lift 3+ times over 2+ weeks to see a projection. ") : ""}Estimated 1RM is the most you could lift for one rep, worked out from your best set each workout. Swipe the chart or tap a point for details.</p>
+  </div>`;
 }
 function SessionList() {
   const ss = [...S.sessions].sort((a, b) => b.end - a.end);
@@ -1195,7 +1448,9 @@ function Settings() {
     setCsv(text);
   };
   return html`<${Sheet} title="Settings">
-    <label class="l" for="set-bw" style="margin-top:0">Bodyweight (lb)</label>
+    <label class="l" style="margin-top:0">Appearance</label>
+    <div class="seg" role="group" aria-label="Appearance"><button class=${curTheme() === "light" ? "on" : ""} onClick=${() => setTheme("light")}>Light</button><button class=${curTheme() === "dark" ? "on" : ""} onClick=${() => setTheme("dark")}>Dark</button></div>
+    <label class="l" for="set-bw">Bodyweight (lb)</label>
     <div class="row"><input id="set-bw" class="f num" inputmode="decimal" value=${bw} onInput=${e => setBw(e.target.value)} />
       <button class="btn" onClick=${() => { const n = parseFloat(bw); if (n > 0) { mutate(() => { st.bw = n; S.core.bwlog.push({ d: Date.now(), w: n }); }); toast("Bodyweight saved"); } }}>Save</button></div>
     <p class="tiny muted">Pull-ups count 100% of this per rep, push-ups 65%. Each workout uses the latest value.</p>
@@ -1203,6 +1458,7 @@ function Settings() {
     <p class="tiny muted">Every ${st.lbPerLevel.toLocaleString()} lb you lift is worth 1 level to your active Pokémon, at any level. A ${fmtVol(st.lbPerLevel * .75)} lb workout = ¾ of a level. Changing this only affects future workouts.</p>
     <label class="l" for="set-share">Party share (% of your pounds the rest of the party gets)</label><input id="set-share" class="f num" inputmode="numeric" value=${Math.round(st.share * 100)} onChange=${e => num("share", e.target.value, v => parseFloat(v) / 100)} />
     <label class="l" for="set-rest">Default rest timer (seconds)</label><input id="set-rest" class="f num" inputmode="numeric" value=${st.rest} onChange=${e => num("rest", e.target.value, v => parseInt(v))} />
+    <button class="btn wide" style="margin-top:16px" onClick=${() => { closeAll(); U.prof = { pages: ["Back for a refresher? Excellent dedication! Here's how PokéLift works.", ...profRules()], i: 0 }; U.layer = "prof"; go(); }}>Replay ${PROF}'s tutorial</button>
     <h2 class="sec">Steps</h2>
     <button class="btn wide" onClick=${() => openSheet(WalkSheet)}>Steps and iPhone sync</button>
     <h2 class="sec">Data</h2>
@@ -1466,7 +1722,7 @@ function Finish() {
     ${prs.length > 0 && html`<h2 class="sec">${prs.length} personal record${prs.length > 1 ? "s" : ""}</h2><div class="list">${prs.map(([e, x]) => html`<div class="li"><span class="tp" style="background:var(--pr)">PR</span><div class="grow b">${e.name}</div><span class="num">${setStr(e, x)}</span></div>`)}</div>`}
     <h2 class="sec">${fmtVol(s.vol)} lb lifted = ${fmtLv(s.vol / s.lbPerLevel)} for your active Pokémon</h2>
     <div class="list">${f.res.map(r => { const m = monOf(r.uid); if (!m) return null;
-      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${48} shiny=${m.shiny} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${fmtLv(r.levels)}${r.share ? " (share)" : ""}</span></div>
+      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${64} shiny=${m.shiny} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${fmtLv(r.levels)}${r.share ? " (share)" : ""}</span></div>
         <div class="small muted num" style="margin:2px 0 5px">Lv ${r.from}${r.to > r.from ? html` → <b style="color:var(--ok)">Lv ${r.to}</b>` : ""}${r.learned.length ? " · learned " + r.learned.map(x => PL.move(x).n).join(", ") : ""}</div><${Bar} pct=${PL.xpProgress(m).pct} /></div></div>`; })}
       ${!f.res.length && html`<div class="empty small">No Pokémon in your party.</div>`}</div>
     ${s.prs > 0 && html`<div class="card small row" style="margin-top:12px"><span class="shiny-tag" style="font-size:18px">✦</span><div class="grow">${s.prs} PR${s.prs > 1 ? "s" : ""} raised your shiny chance to <b class="num">${(PL.shinyChance(prsSince(W_().shinyAt)) * 100).toFixed(2)}%</b> for your next encounter.</div></div>`}
@@ -1485,7 +1741,7 @@ function PromptLayer() {
   let body;
   if (q.k === "msg") body = html`<div class="center">${q.sp && html`<${Sprite} sp=${q.sp} size=${120} />`}<h3>${q.title}</h3><p class="muted">${q.body}</p></div><button class="btn pri wide" onClick=${next}>OK</button>`;
   else if (q.k === "learn") { const mv = PL.move(q.move);
-    body = html`<div class="row" style="margin-bottom:6px"><${Sprite} sp=${m.sp} size=${56} /><h3 class="grow" style="margin:0">${monName(m)} wants to learn ${mv.n}</h3></div>
+    body = html`<div class="row" style="margin-bottom:6px"><${Sprite} sp=${m.sp} size=${72} /><h3 class="grow" style="margin:0">${monName(m)} wants to learn ${mv.n}</h3></div>
       <div class="card row small" style="margin-bottom:12px"><${TypePill} t=${mv.t} /><span class="grow">${mv.p ? `Power ${mv.p}` : "Status move"} · Acc ${mv.a || "—"} · PP ${mv.pp}</span></div>
       ${m.moves.length < 4 ? html`<button class="btn pri wide" onClick=${() => { m.moves.push(q.move); next(); }}>Learn ${mv.n}</button>` : html`
       <div class="small muted" style="margin-bottom:6px">Choose a move to forget:</div>
@@ -1518,7 +1774,7 @@ function Team() {
 }
 function MonRow({ m, active }) {
   const p = PL.xpProgress(m);
-  return html`<button class="li" onClick=${() => openSheet(MonSheet, { uid: m.uid })}><${Sprite} sp=${m.sp} size=${56} shiny=${m.shiny} />
+  return html`<button class="li" onClick=${() => openSheet(MonSheet, { uid: m.uid })}><${Sprite} sp=${m.sp} size=${72} shiny=${m.shiny} />
     <div class="grow"><div class="row" style="gap:6px"><span class="b">${monName(m)}<${ShinyTag} m=${m} /></span>${active && html`<span class="tp" style="background:var(--red)">Active</span>`}<span class="grow"></span><span class="small muted num">Lv ${m.lv}</span></div>
     <div class="row" style="gap:4px;margin:4px 0 6px">${PL.mon(m.sp).t.map(t => html`<${TypePill} t=${t} />`)}</div><${Bar} pct=${p.pct} /></div></button>`;
 }
@@ -1536,8 +1792,8 @@ function Box() {
 function Dex() {
   const seen = new Set(G_().dex);
   return html`<div class="small muted" style="margin-bottom:10px">${seen.size} of 151 registered</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px">${Array.from({ length: 151 }, (_, i) => i + 1).map(n => html`<div class="card center" style="padding:6px 2px">
-      ${seen.has(n) ? html`<${Sprite} sp=${n} size=${48} />` : html`<div style="height:48px;display:flex;align-items:center;justify-content:center" class="faint b">?</div>`}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">${Array.from({ length: 151 }, (_, i) => i + 1).map(n => html`<div class="card center" style="padding:6px 2px">
+      ${seen.has(n) ? html`<${Sprite} sp=${n} size=${64} />` : html`<div style="height:64px;display:flex;align-items:center;justify-content:center" class="faint b">?</div>`}
       <div class="tiny ${seen.has(n) ? "" : "faint"}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${seen.has(n) ? PL.mon(n).n : "#" + String(n).padStart(3, "0")}</div></div>`)}</div>`;
 }
 const STAT_L = ["HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed"];
@@ -1602,7 +1858,7 @@ function GymSheet({ i }) {
       return html`<div class="card" style=${open ? "" : "opacity:.55"}>
         <div class="row"><div class="grow"><div class="b">${o.cls}</div><div class="small muted">${tier.label} · ${wins ? `beaten ×${wins} · rematches are practice` : `first win: +${fmtLv(PL.TRAINER_LV[o.tier])}${o.tier === "leader" ? " + badge" : ""}`}</div></div>
           ${open ? html`<button class="btn sm pri" onClick=${() => startBattle(i, j)}>${wins ? "Rematch" : "Battle"}</button>` : html`<span class="chip">Locked</span>`}</div>
-        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${o.team.map(([sp, lv]) => html`<div class="center"><${Sprite} sp=${sp} size=${44} /><div class="tiny muted num">Lv ${lv}</div></div>`)}</div></div>`; })}</div><//>`;
+        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${o.team.map(([sp, lv]) => html`<div class="center"><${Sprite} sp=${sp} size=${56} /><div class="tiny muted num">Lv ${lv}</div></div>`)}</div></div>`; })}</div><//>`;
 }
 function startBattle(i, j) {
   const g = G_(); const order = [g.active, ...g.party.filter(u => u !== g.active)].map(monOf).filter(Boolean);
@@ -1617,7 +1873,11 @@ function playEvents(ev) {
   const bt = U.battle; bt.playing = true; bt.phase = "play"; bt.q = ev.slice();
   const step = () => { if (!U.battle) return; const e = bt.q.shift();
     if (!e) { bt.playing = false; bt.view = snapOf(bt.B); afterTurn(); go(); return; }
-    bt.view = e.snap; bt.msg = e.msg; go(); playT = setTimeout(step, 900); };
+    const pv = bt.view, nv = e.snap; bt.fx = { n: (bt.fx ? bt.fx.n : 0) + 1 };
+    if (nv.a === pv.a && nv.mine[nv.a][0] < pv.mine[pv.a][0]) { bt.fx.me = "hit"; bt.fx.foe = "lunge"; }
+    if (nv.b === pv.b && nv.theirs[nv.b][0] < pv.theirs[pv.b][0]) { bt.fx.foe = "hit"; bt.fx.me = "lunge"; }
+    if (nv.a !== pv.a) bt.fx.me = "enter"; if (nv.b !== pv.b) bt.fx.foe = "enter";
+    bt.view = nv; bt.msg = e.msg; go(); playT = setTimeout(step, 1000); };
   bt.skip = () => { clearTimeout(playT); step(); };
   step();
 }
@@ -1640,67 +1900,110 @@ function rewardBattle() {
     bt.reward = { first, res };
   } else bt.insight = PL.lossInsight(B);
 }
+function HPBox({ m, hp, st, side, v, arr, B }) {
+  const p = hp / m.maxhp, cls = p > .5 ? "" : p > .2 ? " mid" : " low";
+  return html`<div class=${"hpbox " + side}>
+    <div class="hb-top"><span class="hb-nm">${m.name}</span>${st && html`<span class="hb-st">${{ par: "PAR", slp: "SLP", frz: "FRZ", brn: "BRN", psn: "PSN" }[st]}</span>`}<span class="hb-lv">Lv${m.lv}</span></div>
+    <div class="hb-bar"><b>HP</b><span class=${"hb-track" + cls}><i style=${`width:${Math.max(0, p * 100)}%`}></i></span></div>
+    <div class="hb-bot">${side === "me" ? html`<span class="hb-num">${hp}/${m.maxhp}</span>` : html`<span></span>`}
+      <span class="hb-balls">${arr.map((_, i) => html`<i class=${(side === "me" ? v.mine : v.theirs)[i][0] > 0 ? "" : "out"}></i>`)}</span></div></div>`;
+}
 function Battle() {
   const bt = U.battle; if (!bt) return null; const B = bt.B, v = bt.view;
   const me = B.mine[v.a], foe = B.theirs[v.b];
   const [mhp, mst] = v.mine[v.a], [fhp, fst] = v.theirs[v.b];
-  const hpCls = p => p > .5 ? "hp" : p > .2 ? "hp mid" : "hp low";
-  const stTag = s => s ? html`<span class="tp" style="background:#777;margin-left:6px">${{ par: "PAR", slp: "SLP", frz: "FRZ", brn: "BRN", psn: "PSN" }[s]}</span>` : null;
-  const act = a => { const ev = PL.runTurn(B, a); playEvents(ev); };
+  const act = a => { bt.sub = null; const ev = PL.runTurn(B, a); playEvents(ev); };
   const exit = () => { clearTimeout(playT); U.battle = null; U.layer = null; go(); };
+  const forfeit = () => openSheet(Confirm, { title: "Run from this battle?", body: "It counts as a loss. Nothing is lost; train and come back.", yes: "Run", onYes: () => { B.over = "loss"; bt.msg = "You got away safely… and forfeited the match."; bt.phase = "over"; rewardBattle(); go(); } });
   const cur = B.mine[B.a]; const forced = cur.recharge || cur.charging; const usable = cur.moves.filter(x => x.pp > 0);
-  const party = (arr, side) => html`<div class="row" style="gap:3px">${arr.map((m, i) => html`<i style=${`width:8px;height:8px;border-radius:50%;display:inline-block;background:${(side === "me" ? v.mine : v.theirs)[i][0] > 0 ? "var(--ok)" : "var(--fg3)"}`}></i>`)}</div>`;
-  return html`<div class="layer"><div class="inner wrap" style="padding-top:10px">
-    <div class="row" style="margin-bottom:10px"><div class="grow"><div class="b">${B.foe}</div><div class="tiny muted">${PL.GYMS[B.gymIdx].name} · ${PL.TIER[B.tier].label}</div></div>
-      ${bt.phase !== "over" && html`<button class="btn sm" onClick=${() => openSheet(Confirm, { title: "Forfeit?", body: "It counts as a loss. Nothing is lost; train and come back.", yes: "Forfeit", onYes: () => { B.over = "loss"; bt.msg = "You forfeited."; bt.phase = "over"; rewardBattle(); go(); } })}>Forfeit</button>`}</div>
-    <div class="arena">
-      <div class="plate"><div class="row"><span class="b grow" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${foe.name}</span><span class="small num">Lv ${foe.lv}</span></div>
-        <div class="row" style="margin:5px 0 3px"><span class="tiny b" style="margin-right:6px">HP</span><div class="grow"><${Bar} cls=${hpCls(fhp / foe.maxhp)} pct=${fhp / foe.maxhp} /></div>${stTag(fst)}</div>${party(B.theirs, "foe")}</div>
-      <div style="position:absolute;right:16px;top:14px"><${Sprite} sp=${foe.sp} size=${104} /></div>
-      <div style="position:absolute;left:12px;bottom:4px"><${Sprite} sp=${me.sp} size=${116} back=${true} shiny=${me.shiny} /></div>
-      <div class="plate" style="position:absolute;right:12px;bottom:12px"><div class="row"><span class="b grow" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${me.name}</span><span class="small num">Lv ${me.lv}</span></div>
-        <div class="row" style="margin:5px 0 3px"><span class="tiny b" style="margin-right:6px">HP</span><div class="grow"><${Bar} cls=${hpCls(mhp / me.maxhp)} pct=${mhp / me.maxhp} /></div>${stTag(mst)}</div>
-        <div class="row"><span class="tiny num muted grow">${mhp} / ${me.maxhp}</span>${party(B.mine, "me")}</div></div>
+  const fx = bt.fx || { n: 0 }; const gym = PL.GYMS[B.gymIdx];
+  const canSwitch = B.mine.filter(m => !m.fainted).length > 1;
+  const menu = bt.phase === "choose" && !forced && !bt.sub;
+  return html`<div class="layer battle-layer"><div class="inner" style="padding-bottom:30px">
+    <div class="bt-head"><div class="grow"><div class="b">${B.foe}</div><div class="tiny">${gym.name} · ${PL.TIER[B.tier].label}</div></div>
+      ${bt.phase !== "over" && html`<button class="btn sm" onClick=${forfeit}>Run</button>`}</div>
+    <div class=${"arena2 t-" + (gym.type || "Normal").toLowerCase()}>
+      <${HPBox} m=${foe} hp=${fhp} st=${fst} side="foe" v=${v} arr=${B.theirs} B=${B} />
+      <div class="pad foe-pad"></div><div class="pad me-pad"></div>
+      <div key=${"f" + v.b + "-" + (fx.foe ? fx.n : 0)} class=${"mon foe " + (fhp <= 0 ? "faint" : fx.foe || "")}><${Sprite} sp=${foe.sp} size=${128} /></div>
+      <div key=${"m" + v.a + "-" + (fx.me ? fx.n : 0)} class=${"mon me " + (mhp <= 0 ? "faint" : fx.me || "")}><${Sprite} sp=${me.sp} size=${150} back=${true} shiny=${me.shiny} /></div>
+      <${HPBox} m=${me} hp=${mhp} st=${mst} side="me" v=${v} arr=${B.mine} B=${B} />
     </div>
-    <button class="msg" style="width:100%;text-align:left" onClick=${() => bt.playing && bt.skip()}>${bt.msg}</button>
-    ${bt.phase === "choose" && (forced ? html`<button class="btn pri wide" style="margin-top:10px" onClick=${() => act({ kind: "move", id: cur.charging || "__recharge" })}>Continue</button>`
-      : bt.sub === "switch" ? html`<${SwitchGrid} B=${B} onPick=${i => { bt.sub = null; act({ kind: "switch", to: i }); }} onBack=${() => { bt.sub = null; go(); }} />`
-      : html`<div class="mvg">${usable.length ? cur.moves.map(x => { const mv = PL.move(x.id); const e = mv.p ? PL.eff(mv.t, foe.types) : 1;
-          return html`<button class="mv" disabled=${x.pp <= 0} onClick=${() => act({ kind: "move", id: x.id })}><div class="b">${mv.n}</div><div class="row tiny" style="gap:6px;margin-top:4px"><${TypePill} t=${mv.t} /><span class="muted num grow">${x.pp}/${mv.pp}</span>${e > 1 ? html`<span class="pill-ok">Strong</span>` : e === 0 ? html`<span class="faint">No effect</span>` : e < 1 ? html`<span class="faint">Weak</span>` : null}</div></button>`; })
-          : html`<button class="mv" style="grid-column:1/-1" onClick=${() => act({ kind: "move", id: "struggle" })}><div class="b">Struggle</div><div class="tiny muted">Out of PP</div></button>`}</div>
-        <div class="row" style="margin-top:8px"><button class="btn grow" disabled=${B.mine.filter(m => !m.fainted).length < 2} onClick=${() => { bt.sub = "switch"; go(); }}>Switch Pokémon</button></div>`)}
-    ${bt.phase === "switch" && html`<${SwitchGrid} B=${B} forced=${true} onPick=${i => { const old = B.mine[B.a]; B.a = i; bt.view = snapOf(B); bt.msg = `Go, ${B.mine[i].name}!`; bt.phase = "choose"; go(); setTimeout(() => { if (U.battle === bt && bt.phase === "choose") { bt.msg = `What will ${B.mine[B.a].name} do?`; go(); } }, 900); }} />`}
+    <div class="bt-ui">
+      <button class=${"dlg" + (menu ? " half" : "")} onClick=${() => bt.playing && bt.skip()}><span key=${bt.msg} class="dlg-t">${bt.msg}</span>${bt.playing && html`<i class="dlg-next" aria-hidden="true"></i>`}</button>
+      ${menu && html`<div class="cmd"><button class="c-fight" onClick=${() => { if (!usable.length) act({ kind: "move", id: "struggle" }); else { bt.sub = "fight"; go(); } }}>Fight</button>
+        <button disabled=${!canSwitch} onClick=${() => { bt.sub = "switch"; go(); }}>Pokémon</button><button onClick=${forfeit}>Run</button></div>`}
+    </div>
+    <div class="wrap">
+    ${bt.phase === "choose" && forced && html`<button class="btn pri wide" style="margin-top:10px" onClick=${() => act({ kind: "move", id: cur.charging || "__recharge" })}>Continue</button>`}
+    ${bt.phase === "choose" && !forced && bt.sub === "fight" && html`<div class="mvg2">${cur.moves.map(x => { const mv = PL.move(x.id); const e = mv.p ? PL.eff(mv.t, foe.types) : 1;
+          return html`<button class="mv2" style=${`--tc:${TYPE_COL[mv.t] || "#888"}`} disabled=${x.pp <= 0} onClick=${() => act({ kind: "move", id: x.id })}>
+            <span class="mv-n">${mv.n}</span><span class="mv-m"><${TypePill} t=${mv.t} /><span class="num">PP ${x.pp}/${mv.pp}</span></span>
+            ${e > 1 ? html`<span class="mv-e good">Super effective</span>` : e === 0 ? html`<span class="mv-e">No effect</span>` : e < 1 ? html`<span class="mv-e">Not very effective</span>` : null}</button>`; })}</div>
+        <button class="btn wide" style="margin-top:8px" onClick=${() => { bt.sub = null; go(); }}>Back</button>`}
+    ${bt.phase === "choose" && !forced && bt.sub === "switch" && html`<${SwitchGrid} B=${B} onPick=${i => act({ kind: "switch", to: i })} onBack=${() => { bt.sub = null; go(); }} />`}
+    ${bt.phase === "switch" && html`<${SwitchGrid} B=${B} forced=${true} onPick=${i => { B.a = i; bt.fx = { n: (bt.fx ? bt.fx.n : 0) + 1, me: "enter" }; bt.view = snapOf(B); bt.msg = `Go, ${B.mine[i].name}!`; bt.phase = "choose"; go(); setTimeout(() => { if (U.battle === bt && bt.phase === "choose") { bt.msg = `What will ${B.mine[B.a].name} do?`; go(); } }, 900); }} />`}
     ${bt.phase === "over" && html`<div class="card" style="margin-top:12px">${B.over === "win" ? html`
-        <div class="b" style="font-size:18px">You won!</div>
-        ${bt.reward && (bt.reward.first ? html`<div class="list" style="margin-top:10px">${bt.reward.res.map(x => html`<div class="li" style="min-height:44px;padding:8px 12px"><${Sprite} sp=${x.m.sp} size=${36} shiny=${x.m.shiny} /><span class="grow small b">${monName(x.m)}</span><span class="small num">+${fmtLv(x.lv)}${x.r.to > x.r.from ? ` · Lv ${x.r.to}` : ""}</span></div>`)}</div>`
+        <div class="b" style="font-size:20px">You won!</div>
+        ${bt.reward && (bt.reward.first ? html`<div class="list" style="margin-top:10px">${bt.reward.res.map(x => html`<div class="li" style="min-height:44px;padding:8px 12px"><${Sprite} sp=${x.m.sp} size=${48} shiny=${x.m.shiny} /><span class="grow small b">${monName(x.m)}</span><span class="small num">+${fmtLv(x.lv)}${x.r.to > x.r.from ? ` · Lv ${x.r.to}` : ""}</span></div>`)}</div>`
           : html`<div class="small muted" style="margin-top:6px">Rematch win. Trainers give XP only the first time you beat them.</div>`)}
-        ${bt.badge && html`<div class="row" style="margin-top:10px"><span class="badge" style=${`background:${TYPE_COL[PL.GYMS[B.gymIdx].type]}`}>${PL.GYMS[B.gymIdx].badge.slice(0, 2)}</span><div class="grow small">You earned the <b>${PL.GYMS[B.gymIdx].badge} Badge</b> and ${fmtLv(PL.GYMS[B.gymIdx].lv)} for your XP Bank.${B.gymIdx < 7 ? ` ${PL.GYMS[B.gymIdx + 1].name} is now open.` : ""}</div></div>`}`
-      : html`<div class="b" style="font-size:18px">Not this time.</div><div class="small muted" style="margin:4px 0 10px">${bt.insight || ""} Train, level up, and try again.</div>
-        <div class="row" style="gap:8px;flex-wrap:wrap">${B.theirs.map(m => html`<div class="center"><${Sprite} sp=${m.sp} size=${44} /><div class="tiny muted num">Lv ${m.lv}</div></div>`)}</div>`}
+        ${bt.badge && html`<div class="row" style="margin-top:10px"><span class="badge" style=${`background:${TYPE_COL[gym.type]}`}>${gym.badge.slice(0, 2)}</span><div class="grow small">You earned the <b>${gym.badge} Badge</b> and ${fmtLv(gym.lv)} for your XP Bank.${B.gymIdx < 7 ? ` ${PL.GYMS[B.gymIdx + 1].name} is now open.` : ""}</div></div>`}`
+      : html`<div class="b" style="font-size:20px">Not this time.</div><div class="small muted" style="margin:4px 0 10px">${bt.insight || ""} Train, level up, and try again.</div>
+        <div class="row" style="gap:8px;flex-wrap:wrap">${B.theirs.map(m => html`<div class="center"><${Sprite} sp=${m.sp} size=${56} /><div class="tiny muted num">Lv ${m.lv}</div></div>`)}</div>`}
       <button class="btn pri wide" style="margin-top:12px" onClick=${exit}>Done</button></div>`}
+    </div>
   </div></div>`;
 }
 function SwitchGrid({ B, forced, onPick, onBack }) {
   return html`<div class="list" style="margin-top:10px">${B.mine.map((m, i) => html`<button class="li" disabled=${m.fainted || i === B.a} style=${m.fainted || i === B.a ? "opacity:.45" : ""} onClick=${() => onPick(i)}>
-    <${Sprite} sp=${m.sp} size=${40} shiny=${m.shiny} /><div class="grow"><div class="b">${m.name} <span class="small muted num">Lv ${m.lv}</span></div><div style="margin-top:4px"><${Bar} cls="hp" pct=${m.hp / m.maxhp} /></div></div><span class="tiny muted num">${m.fainted ? "Fainted" : i === B.a ? "In battle" : `${m.hp}/${m.maxhp}`}</span></button>`)}</div>
+    <${Sprite} sp=${m.sp} size=${56} shiny=${m.shiny} /><div class="grow"><div class="b">${m.name} <span class="small muted num">Lv ${m.lv}</span></div><div style="margin-top:4px"><${Bar} cls="hp" pct=${m.hp / m.maxhp} /></div></div><span class="tiny muted num">${m.fainted ? "Fainted" : i === B.a ? "In battle" : `${m.hp}/${m.maxhp}`}</span></button>`)}</div>
     ${!forced && html`<button class="btn wide" style="margin-top:8px" onClick=${onBack}>Back</button>`}`;
 }
 
 /* ---------------- onboarding + shell ---------------- */
-function Onboard() {
-  const [bw, setBw] = useState(""); const [pick, setPick] = useState(null);
-  const ok = parseFloat(bw) > 0 && pick;
-  return html`<div class="wrap" style="padding-top:28px;padding-bottom:40px;max-width:520px;margin:0 auto">
-    <h1 style="font-size:32px;margin:0 0 6px">PokéLift</h1>
-    <p class="muted" style="margin:0 0 20px">Log your lifts. Every pound you move becomes XP for your team, and every 10,000-step day finds you a wild Pokémon.</p>
-    <label class="l" for="ob-bw">Your bodyweight (lb)</label><input id="ob-bw" class="f num" inputmode="decimal" placeholder="180" value=${bw} onInput=${e => setBw(e.target.value)} />
-    <p class="tiny muted">Used for pull-ups (100% per rep) and push-ups (65%). Change it anytime in settings.</p>
-    <h2 class="sec">Choose your partner</h2>
-    <div class="row" style="gap:8px">${[1, 4, 7].map(sp => html`<button class=${"card grow center"} style=${pick === sp ? "border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)" : ""} onClick=${() => setPick(sp)}>
-      <${Sprite} sp=${sp} size=${80} /><div class="b">${PL.mon(sp).n}</div><div class="row" style="justify-content:center;gap:3px;margin-top:4px;flex-wrap:wrap">${PL.mon(sp).t.map(t => html`<${TypePill} t=${t} />`)}</div></button>`)}</div>
-    <p class="small muted">It starts at level 5. Three example templates (Push, Pull, Legs) are ready for you to edit into your own rotation.</p>
-    <button class="btn pri wide" style="margin-top:8px" disabled=${!ok} onClick=${() => mutate(() => { S.core.settings.bw = parseFloat(bw); S.core.bwlog.push({ d: Date.now(), w: parseFloat(bw) }); addMon(PL.newMon(pick, 5)); G_().started = true; })}>Start training</button>
+const PROF = "Professor Ironwood";
+const PROF_IMG = "/img/professor.png";
+const profRules = () => { const lpl = S.core.settings.lbPerLevel; const sh = Math.round(S.core.settings.share * 100); return [
+  `Your active partner gets the XP from every pound you lift in a workout. Every ${lpl.toLocaleString()} lb lifted is one full level!`,
+  `You can carry up to 6 Pokémon. The rest of your party trains alongside you and gets ${sh}% of the XP.`,
+  "Log workouts in the Workouts tab. Check off each set as you finish it, and I'll handle the math. Pull-ups and push-ups count your bodyweight too.",
+  "Walking pays off as well. Every 10,000 steps, a wild Pokémon appears and you can add it to your team.",
+  "When your team is strong enough, take on the 8 Kanto Gyms in the Gyms tab. Beat the trainers, then the Leader, to win a badge.",
+  "Your very own PokéLift legend is about to unfold! Now get under that bar!"]; };
+// Full-screen professor scene. `pages` are strings; tap the dialog to advance. `extra` renders a panel above the dialog.
+function ProfScene({ text, onNext, onSkip, extra, nextLabel, canNext = true, small }) {
+  return html`<div class="prof">
+    <div class="prof-top"><span class="prof-brand">PokéLift</span>${onSkip && html`<button class="btn sm" onClick=${onSkip}>Skip</button>`}</div>
+    <div class=${"prof-stage" + (small ? " small" : "")}><div class="prof-floor"></div><img src=${PROF_IMG} alt=${PROF} class="prof-img" /></div>
+    ${extra && html`<div class="prof-extra">${extra}</div>`}
+    <div class="prof-dlg-wrap"><button class="dlg prof-dlg" disabled=${!canNext} onClick=${() => canNext && onNext()}>
+      <span class="dlg-name">${PROF.replace("Professor ", "Prof. ").toUpperCase()}</span>
+      <span key=${text} class="dlg-t">${text}</span>${canNext && (nextLabel ? html`<span class="dlg-go">${nextLabel} ›</span>` : html`<i class="dlg-next" aria-hidden="true"></i>`)}</button></div>
   </div>`;
+}
+function Onboard() {
+  const [bw, setBw] = useState(""); const [pick, setPick] = useState(null); const [i, setI] = useState(0);
+  const intro = [
+    `Hello there! Welcome to the world of PokéLift! My name is Ironwood. People call me the Pokémon Professor… of Gains!`,
+    "This world is full of creatures called Pokémon. Here, they don't get stronger by battling. They get stronger when YOU train.",
+    "Every pound you lift turns into XP for your team. The harder you train, the faster they grow and evolve.",
+  ];
+  const n = intro.length;
+  if (i < n) return html`<${ProfScene} text=${intro[i]} onNext=${() => setI(i + 1)} onSkip=${() => setI(n)} />`;
+  if (i === n) { const ok = parseFloat(bw) > 0;
+    return html`<${ProfScene} small=${true} text="First, tell me a little about yourself. How much do you weigh?" canNext=${ok} nextLabel="Next" onNext=${() => setI(n + 1)}
+      extra=${html`<div class="card"><label class="l" for="ob-bw" style="margin-top:0">Your bodyweight (lb)</label><input id="ob-bw" class="f num" inputmode="decimal" placeholder="180" value=${bw} onInput=${e => setBw(e.target.value)} onKeyDown=${e => { if (e.key === "Enter" && ok) setI(n + 1); }} />
+        <p class="tiny muted" style="margin-bottom:0">Used for pull-ups (100% per rep) and push-ups (65%). You can change it anytime in Settings.</p></div>`} />`; }
+  return html`<${ProfScene} small=${true} text=${pick ? `So you want ${PL.mon(pick).n}? Great choice! It starts at level 5.` : "Now, choose your first partner! Each one is ready to train with you."}
+    canNext=${!!pick} nextLabel="Start training" onNext=${() => { mutate(() => { S.core.settings.bw = parseFloat(bw); S.core.bwlog.push({ d: Date.now(), w: parseFloat(bw) }); addMon(PL.newMon(pick, 5)); G_().started = true; }); U.prof = { pages: profRules(), i: 0 }; U.layer = "prof"; go(); }}
+    extra=${html`<div class="starters">${[1, 4, 7].map(sp => html`<button class=${"card starter" + (pick === sp ? " on" : "")} aria-pressed=${pick === sp} onClick=${() => setPick(sp)}>
+      <${Sprite} sp=${sp} size=${76} /><div class="b">${PL.mon(sp).n}</div><div class="row" style="justify-content:center;gap:3px;margin-top:4px;flex-wrap:wrap">${PL.mon(sp).t.map(t => html`<${TypePill} t=${t} />`)}</div></button>`)}</div>`} />`;
+}
+function ProfLayer() {
+  const pr = U.prof; if (!pr) return null;
+  const done = () => { U.prof = null; U.layer = null; U.tab = "home"; go(); };
+  const last = pr.i >= pr.pages.length - 1;
+  return html`<div class="layer prof-layer"><${ProfScene} text=${pr.pages[pr.i]} onSkip=${last ? null : done} nextLabel=${last ? "Let's go" : null} onNext=${() => { if (last) done(); else { pr.i++; go(); } }} /></div>`;
 }
 function Loading({ text = "Loading" }) {
   return html`<div class="wrap center" style="padding-top:40vh;color:var(--fg2)">${text}…</div>`;
@@ -1822,6 +2125,7 @@ function App() {
   if (!G_().started) return html`<${Onboard} />${U.sheets.length > 0 && html`<${SheetHost} />`}`;
   const tabs = [["home", "Home", IC.home], ["plan", "Plan", IC.plan], ["lifts", "Workouts", IC.lift], ["team", "Team", IC.team], ["gyms", "Gyms", IC.gym]];
   const View = { home: Home, plan: Plan, lifts: Lifts, team: Team, gyms: Gyms }[U.tab];
+  if (U.layer === "prof") return html`<${ProfLayer} />`;
   return html`<div class="app"><${View} /></div>
     ${S.active && U.layer !== "logger" && html`<div class="resume"><button onClick=${() => { U.layer = "logger"; go(); }}><span>Resume ${S.active.name}</span><span class="num">${fmtDur(Date.now() - S.active.start)}</span></button></div>`}
     <nav class="tabs"><div class="in">${tabs.map(([k, l, ic]) => html`<button class=${U.tab === k ? "on" : ""} aria-current=${U.tab === k ? "page" : null} onClick=${() => { U.tab = k; window.scrollTo(0, 0); go(); }}>${ic}<span>${l}</span></button>`)}</div></nav>

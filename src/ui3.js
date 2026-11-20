@@ -10,7 +10,7 @@ function Team() {
 }
 function MonRow({ m, active }) {
   const p = PL.xpProgress(m);
-  return html`<button class="li" onClick=${() => openSheet(MonSheet, { uid: m.uid })}><${Sprite} sp=${m.sp} size=${56} shiny=${m.shiny} />
+  return html`<button class="li" onClick=${() => openSheet(MonSheet, { uid: m.uid })}><${Sprite} sp=${m.sp} size=${72} shiny=${m.shiny} />
     <div class="grow"><div class="row" style="gap:6px"><span class="b">${monName(m)}<${ShinyTag} m=${m} /></span>${active && html`<span class="tp" style="background:var(--red)">Active</span>`}<span class="grow"></span><span class="small muted num">Lv ${m.lv}</span></div>
     <div class="row" style="gap:4px;margin:4px 0 6px">${PL.mon(m.sp).t.map(t => html`<${TypePill} t=${t} />`)}</div><${Bar} pct=${p.pct} /></div></button>`;
 }
@@ -28,8 +28,8 @@ function Box() {
 function Dex() {
   const seen = new Set(G_().dex);
   return html`<div class="small muted" style="margin-bottom:10px">${seen.size} of 151 registered</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px">${Array.from({ length: 151 }, (_, i) => i + 1).map(n => html`<div class="card center" style="padding:6px 2px">
-      ${seen.has(n) ? html`<${Sprite} sp=${n} size=${48} />` : html`<div style="height:48px;display:flex;align-items:center;justify-content:center" class="faint b">?</div>`}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">${Array.from({ length: 151 }, (_, i) => i + 1).map(n => html`<div class="card center" style="padding:6px 2px">
+      ${seen.has(n) ? html`<${Sprite} sp=${n} size=${64} />` : html`<div style="height:64px;display:flex;align-items:center;justify-content:center" class="faint b">?</div>`}
       <div class="tiny ${seen.has(n) ? "" : "faint"}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${seen.has(n) ? PL.mon(n).n : "#" + String(n).padStart(3, "0")}</div></div>`)}</div>`;
 }
 const STAT_L = ["HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed"];
@@ -94,7 +94,7 @@ function GymSheet({ i }) {
       return html`<div class="card" style=${open ? "" : "opacity:.55"}>
         <div class="row"><div class="grow"><div class="b">${o.cls}</div><div class="small muted">${tier.label} · ${wins ? `beaten ×${wins} · rematches are practice` : `first win: +${fmtLv(PL.TRAINER_LV[o.tier])}${o.tier === "leader" ? " + badge" : ""}`}</div></div>
           ${open ? html`<button class="btn sm pri" onClick=${() => startBattle(i, j)}>${wins ? "Rematch" : "Battle"}</button>` : html`<span class="chip">Locked</span>`}</div>
-        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${o.team.map(([sp, lv]) => html`<div class="center"><${Sprite} sp=${sp} size=${44} /><div class="tiny muted num">Lv ${lv}</div></div>`)}</div></div>`; })}</div><//>`;
+        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${o.team.map(([sp, lv]) => html`<div class="center"><${Sprite} sp=${sp} size=${56} /><div class="tiny muted num">Lv ${lv}</div></div>`)}</div></div>`; })}</div><//>`;
 }
 function startBattle(i, j) {
   const g = G_(); const order = [g.active, ...g.party.filter(u => u !== g.active)].map(monOf).filter(Boolean);
@@ -109,7 +109,11 @@ function playEvents(ev) {
   const bt = U.battle; bt.playing = true; bt.phase = "play"; bt.q = ev.slice();
   const step = () => { if (!U.battle) return; const e = bt.q.shift();
     if (!e) { bt.playing = false; bt.view = snapOf(bt.B); afterTurn(); go(); return; }
-    bt.view = e.snap; bt.msg = e.msg; go(); playT = setTimeout(step, 900); };
+    const pv = bt.view, nv = e.snap; bt.fx = { n: (bt.fx ? bt.fx.n : 0) + 1 };
+    if (nv.a === pv.a && nv.mine[nv.a][0] < pv.mine[pv.a][0]) { bt.fx.me = "hit"; bt.fx.foe = "lunge"; }
+    if (nv.b === pv.b && nv.theirs[nv.b][0] < pv.theirs[pv.b][0]) { bt.fx.foe = "hit"; bt.fx.me = "lunge"; }
+    if (nv.a !== pv.a) bt.fx.me = "enter"; if (nv.b !== pv.b) bt.fx.foe = "enter";
+    bt.view = nv; bt.msg = e.msg; go(); playT = setTimeout(step, 1000); };
   bt.skip = () => { clearTimeout(playT); step(); };
   step();
 }
@@ -132,67 +136,110 @@ function rewardBattle() {
     bt.reward = { first, res };
   } else bt.insight = PL.lossInsight(B);
 }
+function HPBox({ m, hp, st, side, v, arr, B }) {
+  const p = hp / m.maxhp, cls = p > .5 ? "" : p > .2 ? " mid" : " low";
+  return html`<div class=${"hpbox " + side}>
+    <div class="hb-top"><span class="hb-nm">${m.name}</span>${st && html`<span class="hb-st">${{ par: "PAR", slp: "SLP", frz: "FRZ", brn: "BRN", psn: "PSN" }[st]}</span>`}<span class="hb-lv">Lv${m.lv}</span></div>
+    <div class="hb-bar"><b>HP</b><span class=${"hb-track" + cls}><i style=${`width:${Math.max(0, p * 100)}%`}></i></span></div>
+    <div class="hb-bot">${side === "me" ? html`<span class="hb-num">${hp}/${m.maxhp}</span>` : html`<span></span>`}
+      <span class="hb-balls">${arr.map((_, i) => html`<i class=${(side === "me" ? v.mine : v.theirs)[i][0] > 0 ? "" : "out"}></i>`)}</span></div></div>`;
+}
 function Battle() {
   const bt = U.battle; if (!bt) return null; const B = bt.B, v = bt.view;
   const me = B.mine[v.a], foe = B.theirs[v.b];
   const [mhp, mst] = v.mine[v.a], [fhp, fst] = v.theirs[v.b];
-  const hpCls = p => p > .5 ? "hp" : p > .2 ? "hp mid" : "hp low";
-  const stTag = s => s ? html`<span class="tp" style="background:#777;margin-left:6px">${{ par: "PAR", slp: "SLP", frz: "FRZ", brn: "BRN", psn: "PSN" }[s]}</span>` : null;
-  const act = a => { const ev = PL.runTurn(B, a); playEvents(ev); };
+  const act = a => { bt.sub = null; const ev = PL.runTurn(B, a); playEvents(ev); };
   const exit = () => { clearTimeout(playT); U.battle = null; U.layer = null; go(); };
+  const forfeit = () => openSheet(Confirm, { title: "Run from this battle?", body: "It counts as a loss. Nothing is lost; train and come back.", yes: "Run", onYes: () => { B.over = "loss"; bt.msg = "You got away safely… and forfeited the match."; bt.phase = "over"; rewardBattle(); go(); } });
   const cur = B.mine[B.a]; const forced = cur.recharge || cur.charging; const usable = cur.moves.filter(x => x.pp > 0);
-  const party = (arr, side) => html`<div class="row" style="gap:3px">${arr.map((m, i) => html`<i style=${`width:8px;height:8px;border-radius:50%;display:inline-block;background:${(side === "me" ? v.mine : v.theirs)[i][0] > 0 ? "var(--ok)" : "var(--fg3)"}`}></i>`)}</div>`;
-  return html`<div class="layer"><div class="inner wrap" style="padding-top:10px">
-    <div class="row" style="margin-bottom:10px"><div class="grow"><div class="b">${B.foe}</div><div class="tiny muted">${PL.GYMS[B.gymIdx].name} · ${PL.TIER[B.tier].label}</div></div>
-      ${bt.phase !== "over" && html`<button class="btn sm" onClick=${() => openSheet(Confirm, { title: "Forfeit?", body: "It counts as a loss. Nothing is lost; train and come back.", yes: "Forfeit", onYes: () => { B.over = "loss"; bt.msg = "You forfeited."; bt.phase = "over"; rewardBattle(); go(); } })}>Forfeit</button>`}</div>
-    <div class="arena">
-      <div class="plate"><div class="row"><span class="b grow" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${foe.name}</span><span class="small num">Lv ${foe.lv}</span></div>
-        <div class="row" style="margin:5px 0 3px"><span class="tiny b" style="margin-right:6px">HP</span><div class="grow"><${Bar} cls=${hpCls(fhp / foe.maxhp)} pct=${fhp / foe.maxhp} /></div>${stTag(fst)}</div>${party(B.theirs, "foe")}</div>
-      <div style="position:absolute;right:16px;top:14px"><${Sprite} sp=${foe.sp} size=${104} /></div>
-      <div style="position:absolute;left:12px;bottom:4px"><${Sprite} sp=${me.sp} size=${116} back=${true} shiny=${me.shiny} /></div>
-      <div class="plate" style="position:absolute;right:12px;bottom:12px"><div class="row"><span class="b grow" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${me.name}</span><span class="small num">Lv ${me.lv}</span></div>
-        <div class="row" style="margin:5px 0 3px"><span class="tiny b" style="margin-right:6px">HP</span><div class="grow"><${Bar} cls=${hpCls(mhp / me.maxhp)} pct=${mhp / me.maxhp} /></div>${stTag(mst)}</div>
-        <div class="row"><span class="tiny num muted grow">${mhp} / ${me.maxhp}</span>${party(B.mine, "me")}</div></div>
+  const fx = bt.fx || { n: 0 }; const gym = PL.GYMS[B.gymIdx];
+  const canSwitch = B.mine.filter(m => !m.fainted).length > 1;
+  const menu = bt.phase === "choose" && !forced && !bt.sub;
+  return html`<div class="layer battle-layer"><div class="inner" style="padding-bottom:30px">
+    <div class="bt-head"><div class="grow"><div class="b">${B.foe}</div><div class="tiny">${gym.name} · ${PL.TIER[B.tier].label}</div></div>
+      ${bt.phase !== "over" && html`<button class="btn sm" onClick=${forfeit}>Run</button>`}</div>
+    <div class=${"arena2 t-" + (gym.type || "Normal").toLowerCase()}>
+      <${HPBox} m=${foe} hp=${fhp} st=${fst} side="foe" v=${v} arr=${B.theirs} B=${B} />
+      <div class="pad foe-pad"></div><div class="pad me-pad"></div>
+      <div key=${"f" + v.b + "-" + (fx.foe ? fx.n : 0)} class=${"mon foe " + (fhp <= 0 ? "faint" : fx.foe || "")}><${Sprite} sp=${foe.sp} size=${128} /></div>
+      <div key=${"m" + v.a + "-" + (fx.me ? fx.n : 0)} class=${"mon me " + (mhp <= 0 ? "faint" : fx.me || "")}><${Sprite} sp=${me.sp} size=${150} back=${true} shiny=${me.shiny} /></div>
+      <${HPBox} m=${me} hp=${mhp} st=${mst} side="me" v=${v} arr=${B.mine} B=${B} />
     </div>
-    <button class="msg" style="width:100%;text-align:left" onClick=${() => bt.playing && bt.skip()}>${bt.msg}</button>
-    ${bt.phase === "choose" && (forced ? html`<button class="btn pri wide" style="margin-top:10px" onClick=${() => act({ kind: "move", id: cur.charging || "__recharge" })}>Continue</button>`
-      : bt.sub === "switch" ? html`<${SwitchGrid} B=${B} onPick=${i => { bt.sub = null; act({ kind: "switch", to: i }); }} onBack=${() => { bt.sub = null; go(); }} />`
-      : html`<div class="mvg">${usable.length ? cur.moves.map(x => { const mv = PL.move(x.id); const e = mv.p ? PL.eff(mv.t, foe.types) : 1;
-          return html`<button class="mv" disabled=${x.pp <= 0} onClick=${() => act({ kind: "move", id: x.id })}><div class="b">${mv.n}</div><div class="row tiny" style="gap:6px;margin-top:4px"><${TypePill} t=${mv.t} /><span class="muted num grow">${x.pp}/${mv.pp}</span>${e > 1 ? html`<span class="pill-ok">Strong</span>` : e === 0 ? html`<span class="faint">No effect</span>` : e < 1 ? html`<span class="faint">Weak</span>` : null}</div></button>`; })
-          : html`<button class="mv" style="grid-column:1/-1" onClick=${() => act({ kind: "move", id: "struggle" })}><div class="b">Struggle</div><div class="tiny muted">Out of PP</div></button>`}</div>
-        <div class="row" style="margin-top:8px"><button class="btn grow" disabled=${B.mine.filter(m => !m.fainted).length < 2} onClick=${() => { bt.sub = "switch"; go(); }}>Switch Pokémon</button></div>`)}
-    ${bt.phase === "switch" && html`<${SwitchGrid} B=${B} forced=${true} onPick=${i => { const old = B.mine[B.a]; B.a = i; bt.view = snapOf(B); bt.msg = `Go, ${B.mine[i].name}!`; bt.phase = "choose"; go(); setTimeout(() => { if (U.battle === bt && bt.phase === "choose") { bt.msg = `What will ${B.mine[B.a].name} do?`; go(); } }, 900); }} />`}
+    <div class="bt-ui">
+      <button class=${"dlg" + (menu ? " half" : "")} onClick=${() => bt.playing && bt.skip()}><span key=${bt.msg} class="dlg-t">${bt.msg}</span>${bt.playing && html`<i class="dlg-next" aria-hidden="true"></i>`}</button>
+      ${menu && html`<div class="cmd"><button class="c-fight" onClick=${() => { if (!usable.length) act({ kind: "move", id: "struggle" }); else { bt.sub = "fight"; go(); } }}>Fight</button>
+        <button disabled=${!canSwitch} onClick=${() => { bt.sub = "switch"; go(); }}>Pokémon</button><button onClick=${forfeit}>Run</button></div>`}
+    </div>
+    <div class="wrap">
+    ${bt.phase === "choose" && forced && html`<button class="btn pri wide" style="margin-top:10px" onClick=${() => act({ kind: "move", id: cur.charging || "__recharge" })}>Continue</button>`}
+    ${bt.phase === "choose" && !forced && bt.sub === "fight" && html`<div class="mvg2">${cur.moves.map(x => { const mv = PL.move(x.id); const e = mv.p ? PL.eff(mv.t, foe.types) : 1;
+          return html`<button class="mv2" style=${`--tc:${TYPE_COL[mv.t] || "#888"}`} disabled=${x.pp <= 0} onClick=${() => act({ kind: "move", id: x.id })}>
+            <span class="mv-n">${mv.n}</span><span class="mv-m"><${TypePill} t=${mv.t} /><span class="num">PP ${x.pp}/${mv.pp}</span></span>
+            ${e > 1 ? html`<span class="mv-e good">Super effective</span>` : e === 0 ? html`<span class="mv-e">No effect</span>` : e < 1 ? html`<span class="mv-e">Not very effective</span>` : null}</button>`; })}</div>
+        <button class="btn wide" style="margin-top:8px" onClick=${() => { bt.sub = null; go(); }}>Back</button>`}
+    ${bt.phase === "choose" && !forced && bt.sub === "switch" && html`<${SwitchGrid} B=${B} onPick=${i => act({ kind: "switch", to: i })} onBack=${() => { bt.sub = null; go(); }} />`}
+    ${bt.phase === "switch" && html`<${SwitchGrid} B=${B} forced=${true} onPick=${i => { B.a = i; bt.fx = { n: (bt.fx ? bt.fx.n : 0) + 1, me: "enter" }; bt.view = snapOf(B); bt.msg = `Go, ${B.mine[i].name}!`; bt.phase = "choose"; go(); setTimeout(() => { if (U.battle === bt && bt.phase === "choose") { bt.msg = `What will ${B.mine[B.a].name} do?`; go(); } }, 900); }} />`}
     ${bt.phase === "over" && html`<div class="card" style="margin-top:12px">${B.over === "win" ? html`
-        <div class="b" style="font-size:18px">You won!</div>
-        ${bt.reward && (bt.reward.first ? html`<div class="list" style="margin-top:10px">${bt.reward.res.map(x => html`<div class="li" style="min-height:44px;padding:8px 12px"><${Sprite} sp=${x.m.sp} size=${36} shiny=${x.m.shiny} /><span class="grow small b">${monName(x.m)}</span><span class="small num">+${fmtLv(x.lv)}${x.r.to > x.r.from ? ` · Lv ${x.r.to}` : ""}</span></div>`)}</div>`
+        <div class="b" style="font-size:20px">You won!</div>
+        ${bt.reward && (bt.reward.first ? html`<div class="list" style="margin-top:10px">${bt.reward.res.map(x => html`<div class="li" style="min-height:44px;padding:8px 12px"><${Sprite} sp=${x.m.sp} size=${48} shiny=${x.m.shiny} /><span class="grow small b">${monName(x.m)}</span><span class="small num">+${fmtLv(x.lv)}${x.r.to > x.r.from ? ` · Lv ${x.r.to}` : ""}</span></div>`)}</div>`
           : html`<div class="small muted" style="margin-top:6px">Rematch win. Trainers give XP only the first time you beat them.</div>`)}
-        ${bt.badge && html`<div class="row" style="margin-top:10px"><span class="badge" style=${`background:${TYPE_COL[PL.GYMS[B.gymIdx].type]}`}>${PL.GYMS[B.gymIdx].badge.slice(0, 2)}</span><div class="grow small">You earned the <b>${PL.GYMS[B.gymIdx].badge} Badge</b> and ${fmtLv(PL.GYMS[B.gymIdx].lv)} for your XP Bank.${B.gymIdx < 7 ? ` ${PL.GYMS[B.gymIdx + 1].name} is now open.` : ""}</div></div>`}`
-      : html`<div class="b" style="font-size:18px">Not this time.</div><div class="small muted" style="margin:4px 0 10px">${bt.insight || ""} Train, level up, and try again.</div>
-        <div class="row" style="gap:8px;flex-wrap:wrap">${B.theirs.map(m => html`<div class="center"><${Sprite} sp=${m.sp} size=${44} /><div class="tiny muted num">Lv ${m.lv}</div></div>`)}</div>`}
+        ${bt.badge && html`<div class="row" style="margin-top:10px"><span class="badge" style=${`background:${TYPE_COL[gym.type]}`}>${gym.badge.slice(0, 2)}</span><div class="grow small">You earned the <b>${gym.badge} Badge</b> and ${fmtLv(gym.lv)} for your XP Bank.${B.gymIdx < 7 ? ` ${PL.GYMS[B.gymIdx + 1].name} is now open.` : ""}</div></div>`}`
+      : html`<div class="b" style="font-size:20px">Not this time.</div><div class="small muted" style="margin:4px 0 10px">${bt.insight || ""} Train, level up, and try again.</div>
+        <div class="row" style="gap:8px;flex-wrap:wrap">${B.theirs.map(m => html`<div class="center"><${Sprite} sp=${m.sp} size=${56} /><div class="tiny muted num">Lv ${m.lv}</div></div>`)}</div>`}
       <button class="btn pri wide" style="margin-top:12px" onClick=${exit}>Done</button></div>`}
+    </div>
   </div></div>`;
 }
 function SwitchGrid({ B, forced, onPick, onBack }) {
   return html`<div class="list" style="margin-top:10px">${B.mine.map((m, i) => html`<button class="li" disabled=${m.fainted || i === B.a} style=${m.fainted || i === B.a ? "opacity:.45" : ""} onClick=${() => onPick(i)}>
-    <${Sprite} sp=${m.sp} size=${40} shiny=${m.shiny} /><div class="grow"><div class="b">${m.name} <span class="small muted num">Lv ${m.lv}</span></div><div style="margin-top:4px"><${Bar} cls="hp" pct=${m.hp / m.maxhp} /></div></div><span class="tiny muted num">${m.fainted ? "Fainted" : i === B.a ? "In battle" : `${m.hp}/${m.maxhp}`}</span></button>`)}</div>
+    <${Sprite} sp=${m.sp} size=${56} shiny=${m.shiny} /><div class="grow"><div class="b">${m.name} <span class="small muted num">Lv ${m.lv}</span></div><div style="margin-top:4px"><${Bar} cls="hp" pct=${m.hp / m.maxhp} /></div></div><span class="tiny muted num">${m.fainted ? "Fainted" : i === B.a ? "In battle" : `${m.hp}/${m.maxhp}`}</span></button>`)}</div>
     ${!forced && html`<button class="btn wide" style="margin-top:8px" onClick=${onBack}>Back</button>`}`;
 }
 
 /* ---------------- onboarding + shell ---------------- */
-function Onboard() {
-  const [bw, setBw] = useState(""); const [pick, setPick] = useState(null);
-  const ok = parseFloat(bw) > 0 && pick;
-  return html`<div class="wrap" style="padding-top:28px;padding-bottom:40px;max-width:520px;margin:0 auto">
-    <h1 style="font-size:32px;margin:0 0 6px">PokéLift</h1>
-    <p class="muted" style="margin:0 0 20px">Log your lifts. Every pound you move becomes XP for your team, and every 10,000-step day finds you a wild Pokémon.</p>
-    <label class="l" for="ob-bw">Your bodyweight (lb)</label><input id="ob-bw" class="f num" inputmode="decimal" placeholder="180" value=${bw} onInput=${e => setBw(e.target.value)} />
-    <p class="tiny muted">Used for pull-ups (100% per rep) and push-ups (65%). Change it anytime in settings.</p>
-    <h2 class="sec">Choose your partner</h2>
-    <div class="row" style="gap:8px">${[1, 4, 7].map(sp => html`<button class=${"card grow center"} style=${pick === sp ? "border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)" : ""} onClick=${() => setPick(sp)}>
-      <${Sprite} sp=${sp} size=${80} /><div class="b">${PL.mon(sp).n}</div><div class="row" style="justify-content:center;gap:3px;margin-top:4px;flex-wrap:wrap">${PL.mon(sp).t.map(t => html`<${TypePill} t=${t} />`)}</div></button>`)}</div>
-    <p class="small muted">It starts at level 5. Three example templates (Push, Pull, Legs) are ready for you to edit into your own rotation.</p>
-    <button class="btn pri wide" style="margin-top:8px" disabled=${!ok} onClick=${() => mutate(() => { S.core.settings.bw = parseFloat(bw); S.core.bwlog.push({ d: Date.now(), w: parseFloat(bw) }); addMon(PL.newMon(pick, 5)); G_().started = true; })}>Start training</button>
+const PROF = "Professor Ironwood";
+const PROF_IMG = "/img/professor.png";
+const profRules = () => { const lpl = S.core.settings.lbPerLevel; const sh = Math.round(S.core.settings.share * 100); return [
+  `Your active partner gets the XP from every pound you lift in a workout. Every ${lpl.toLocaleString()} lb lifted is one full level!`,
+  `You can carry up to 6 Pokémon. The rest of your party trains alongside you and gets ${sh}% of the XP.`,
+  "Log workouts in the Workouts tab. Check off each set as you finish it, and I'll handle the math. Pull-ups and push-ups count your bodyweight too.",
+  "Walking pays off as well. Every 10,000 steps, a wild Pokémon appears and you can add it to your team.",
+  "When your team is strong enough, take on the 8 Kanto Gyms in the Gyms tab. Beat the trainers, then the Leader, to win a badge.",
+  "Your very own PokéLift legend is about to unfold! Now get under that bar!"]; };
+// Full-screen professor scene. `pages` are strings; tap the dialog to advance. `extra` renders a panel above the dialog.
+function ProfScene({ text, onNext, onSkip, extra, nextLabel, canNext = true, small }) {
+  return html`<div class="prof">
+    <div class="prof-top"><span class="prof-brand">PokéLift</span>${onSkip && html`<button class="btn sm" onClick=${onSkip}>Skip</button>`}</div>
+    <div class=${"prof-stage" + (small ? " small" : "")}><div class="prof-floor"></div><img src=${PROF_IMG} alt=${PROF} class="prof-img" /></div>
+    ${extra && html`<div class="prof-extra">${extra}</div>`}
+    <div class="prof-dlg-wrap"><button class="dlg prof-dlg" disabled=${!canNext} onClick=${() => canNext && onNext()}>
+      <span class="dlg-name">${PROF.replace("Professor ", "Prof. ").toUpperCase()}</span>
+      <span key=${text} class="dlg-t">${text}</span>${canNext && (nextLabel ? html`<span class="dlg-go">${nextLabel} ›</span>` : html`<i class="dlg-next" aria-hidden="true"></i>`)}</button></div>
   </div>`;
+}
+function Onboard() {
+  const [bw, setBw] = useState(""); const [pick, setPick] = useState(null); const [i, setI] = useState(0);
+  const intro = [
+    `Hello there! Welcome to the world of PokéLift! My name is Ironwood. People call me the Pokémon Professor… of Gains!`,
+    "This world is full of creatures called Pokémon. Here, they don't get stronger by battling. They get stronger when YOU train.",
+    "Every pound you lift turns into XP for your team. The harder you train, the faster they grow and evolve.",
+  ];
+  const n = intro.length;
+  if (i < n) return html`<${ProfScene} text=${intro[i]} onNext=${() => setI(i + 1)} onSkip=${() => setI(n)} />`;
+  if (i === n) { const ok = parseFloat(bw) > 0;
+    return html`<${ProfScene} small=${true} text="First, tell me a little about yourself. How much do you weigh?" canNext=${ok} nextLabel="Next" onNext=${() => setI(n + 1)}
+      extra=${html`<div class="card"><label class="l" for="ob-bw" style="margin-top:0">Your bodyweight (lb)</label><input id="ob-bw" class="f num" inputmode="decimal" placeholder="180" value=${bw} onInput=${e => setBw(e.target.value)} onKeyDown=${e => { if (e.key === "Enter" && ok) setI(n + 1); }} />
+        <p class="tiny muted" style="margin-bottom:0">Used for pull-ups (100% per rep) and push-ups (65%). You can change it anytime in Settings.</p></div>`} />`; }
+  return html`<${ProfScene} small=${true} text=${pick ? `So you want ${PL.mon(pick).n}? Great choice! It starts at level 5.` : "Now, choose your first partner! Each one is ready to train with you."}
+    canNext=${!!pick} nextLabel="Start training" onNext=${() => { mutate(() => { S.core.settings.bw = parseFloat(bw); S.core.bwlog.push({ d: Date.now(), w: parseFloat(bw) }); addMon(PL.newMon(pick, 5)); G_().started = true; }); U.prof = { pages: profRules(), i: 0 }; U.layer = "prof"; go(); }}
+    extra=${html`<div class="starters">${[1, 4, 7].map(sp => html`<button class=${"card starter" + (pick === sp ? " on" : "")} aria-pressed=${pick === sp} onClick=${() => setPick(sp)}>
+      <${Sprite} sp=${sp} size=${76} /><div class="b">${PL.mon(sp).n}</div><div class="row" style="justify-content:center;gap:3px;margin-top:4px;flex-wrap:wrap">${PL.mon(sp).t.map(t => html`<${TypePill} t=${t} />`)}</div></button>`)}</div>`} />`;
+}
+function ProfLayer() {
+  const pr = U.prof; if (!pr) return null;
+  const done = () => { U.prof = null; U.layer = null; U.tab = "home"; go(); };
+  const last = pr.i >= pr.pages.length - 1;
+  return html`<div class="layer prof-layer"><${ProfScene} text=${pr.pages[pr.i]} onSkip=${last ? null : done} nextLabel=${last ? "Let's go" : null} onNext=${() => { if (last) done(); else { pr.i++; go(); } }} /></div>`;
 }
 function Loading({ text = "Loading" }) {
   return html`<div class="wrap center" style="padding-top:40vh;color:var(--fg2)">${text}…</div>`;
@@ -314,6 +361,7 @@ function App() {
   if (!G_().started) return html`<${Onboard} />${U.sheets.length > 0 && html`<${SheetHost} />`}`;
   const tabs = [["home", "Home", IC.home], ["plan", "Plan", IC.plan], ["lifts", "Workouts", IC.lift], ["team", "Team", IC.team], ["gyms", "Gyms", IC.gym]];
   const View = { home: Home, plan: Plan, lifts: Lifts, team: Team, gyms: Gyms }[U.tab];
+  if (U.layer === "prof") return html`<${ProfLayer} />`;
   return html`<div class="app"><${View} /></div>
     ${S.active && U.layer !== "logger" && html`<div class="resume"><button onClick=${() => { U.layer = "logger"; go(); }}><span>Resume ${S.active.name}</span><span class="num">${fmtDur(Date.now() - S.active.start)}</span></button></div>`}
     <nav class="tabs"><div class="in">${tabs.map(([k, l, ic]) => html`<button class=${U.tab === k ? "on" : ""} aria-current=${U.tab === k ? "page" : null} onClick=${() => { U.tab = k; window.scrollTo(0, 0); go(); }}>${ic}<span>${l}</span></button>`)}</div></nav>

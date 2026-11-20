@@ -250,7 +250,7 @@ function Finish() {
     ${prs.length > 0 && html`<h2 class="sec">${prs.length} personal record${prs.length > 1 ? "s" : ""}</h2><div class="list">${prs.map(([e, x]) => html`<div class="li"><span class="tp" style="background:var(--pr)">PR</span><div class="grow b">${e.name}</div><span class="num">${setStr(e, x)}</span></div>`)}</div>`}
     <h2 class="sec">${fmtVol(s.vol)} lb lifted = ${fmtLv(s.vol / s.lbPerLevel)} for your active Pokémon</h2>
     <div class="list">${f.res.map(r => { const m = monOf(r.uid); if (!m) return null;
-      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${48} shiny=${m.shiny} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${fmtLv(r.levels)}${r.share ? " (share)" : ""}</span></div>
+      return html`<div class="li"><${Sprite} sp=${r.before.sp} size=${64} shiny=${m.shiny} /><div class="grow"><div class="row"><span class="b grow">${monName(m)}</span><span class="small num">+${fmtLv(r.levels)}${r.share ? " (share)" : ""}</span></div>
         <div class="small muted num" style="margin:2px 0 5px">Lv ${r.from}${r.to > r.from ? html` → <b style="color:var(--ok)">Lv ${r.to}</b>` : ""}${r.learned.length ? " · learned " + r.learned.map(x => PL.move(x).n).join(", ") : ""}</div><${Bar} pct=${PL.xpProgress(m).pct} /></div></div>`; })}
       ${!f.res.length && html`<div class="empty small">No Pokémon in your party.</div>`}</div>
     ${s.prs > 0 && html`<div class="card small row" style="margin-top:12px"><span class="shiny-tag" style="font-size:18px">✦</span><div class="grow">${s.prs} PR${s.prs > 1 ? "s" : ""} raised your shiny chance to <b class="num">${(PL.shinyChance(prsSince(W_().shinyAt)) * 100).toFixed(2)}%</b> for your next encounter.</div></div>`}
@@ -269,7 +269,7 @@ function PromptLayer() {
   let body;
   if (q.k === "msg") body = html`<div class="center">${q.sp && html`<${Sprite} sp=${q.sp} size=${120} />`}<h3>${q.title}</h3><p class="muted">${q.body}</p></div><button class="btn pri wide" onClick=${next}>OK</button>`;
   else if (q.k === "learn") { const mv = PL.move(q.move);
-    body = html`<div class="row" style="margin-bottom:6px"><${Sprite} sp=${m.sp} size=${56} /><h3 class="grow" style="margin:0">${monName(m)} wants to learn ${mv.n}</h3></div>
+    body = html`<div class="row" style="margin-bottom:6px"><${Sprite} sp=${m.sp} size=${72} /><h3 class="grow" style="margin:0">${monName(m)} wants to learn ${mv.n}</h3></div>
       <div class="card row small" style="margin-bottom:12px"><${TypePill} t=${mv.t} /><span class="grow">${mv.p ? `Power ${mv.p}` : "Status move"} · Acc ${mv.a || "—"} · PP ${mv.pp}</span></div>
       ${m.moves.length < 4 ? html`<button class="btn pri wide" onClick=${() => { m.moves.push(q.move); next(); }}>Learn ${mv.n}</button>` : html`
       <div class="small muted" style="margin-bottom:6px">Choose a move to forget:</div>

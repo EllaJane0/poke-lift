@@ -12,17 +12,44 @@ const TYPE_COL = { Normal:"#9a9a78", Fire:"#e8732c", Water:"#4d84e6", Electric:"
   Ground:"#cba04c", Flying:"#8b7ae0", Psychic:"#ec4f7d", Bug:"#93a81a", Rock:"#a8902e", Ghost:"#6a5694", Dragon:"#6a3cf0", Dark:"#6b5446", Steel:"#9a9ab6" };
 let SPRITES_OK = true;
 const SPR = (sp, back, shiny) => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${back ? "back/" : ""}${shiny ? "shiny/" : ""}${sp}.png`;
-function Sprite({ sp, size = 64, back = false, shiny = false }) {
+const TRIM = {}; const TRIM_WAIT = {};
+function trimBox(src) {
+  if (TRIM[src] !== undefined) return Promise.resolve(TRIM[src]);
+  return TRIM_WAIT[src] || (TRIM_WAIT[src] = new Promise(res => {
+    const im = new Image(); im.crossOrigin = "anonymous";
+    im.onload = () => { try {
+        const W = im.naturalWidth, H = im.naturalHeight, c = document.createElement("canvas"); c.width = W; c.height = H;
+        const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, W, H).data;
+        let x0 = W, y0 = H, x1 = -1, y1 = -1;
+        for (let y = 0; y < H; y++) for (let k = 0; k < W; k++) if (d[(y * W + k) * 4 + 3] > 8) { if (k < x0) x0 = k; if (k > x1) x1 = k; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        TRIM[src] = x1 < 0 ? null : { W, H, x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+      } catch (e) { TRIM[src] = null; } res(TRIM[src]); };
+    im.onerror = () => { TRIM[src] = null; res(null); };
+    im.src = src; }));
+}
+// size = the square slot in px. The visible creature is scaled (in whole-ish steps) to fill it, bottom-aligned so it "stands".
+function Sprite({ sp, size = 64, back = false, shiny = false, fill = .92 }) {
   const [bad, setBad] = useState(!SPRITES_OK);
-  const m = PL.mon(sp); const t = m.t;
+  const src = SPR(sp, back, shiny);
+  const [box, setBox] = useState(TRIM[src]);
+  useEffect(() => { let on = true; if (TRIM[src] === undefined) trimBox(src).then(b => on && setBox(b)); else setBox(TRIM[src]); return () => { on = false; }; }, [src]);
+  const m = PL.mon(sp); const t = m.t; const label = (shiny ? "Shiny " : "") + m.n;
   const bg = t.length > 1 ? `linear-gradient(135deg,${TYPE_COL[t[0]]} 50%,${TYPE_COL[t[1]]} 50%)` : TYPE_COL[t[0]];
-  return html`<span class="spr" style=${`width:${size}px;height:${size}px`} title=${(shiny ? "Shiny " : "") + m.n}>
-    ${bad ? html`<span class="fb" style=${`background:${bg};font-size:${Math.round(size * .3)}px`}>${m.n.replace(/[^A-Za-z]/g, "").slice(0, 2)}</span>`
-          : html`<img src=${SPR(sp, back, shiny)} alt=${(shiny ? "Shiny " : "") + m.n} loading="lazy" onError=${() => { SPRITES_OK = false; setBad(true); }} />`}
+  let body;
+  if (bad) body = html`<span class="fb" style=${`background:${bg};font-size:${Math.round(size * .3)}px`}>${m.n.replace(/[^A-Za-z]/g, "").slice(0, 2)}</span>`;
+  else if (box) {
+    const k = size * fill / Math.max(box.w, box.h);
+    const left = (size - box.w * k) / 2 - box.x0 * k, top = size - box.h * k - box.y0 * k - size * (1 - fill) / 4;
+    body = html`<img src=${src} alt=${label} style=${`width:${box.W * k}px;height:${box.H * k}px;left:${left}px;top:${top}px`} onError=${() => { SPRITES_OK = false; setBad(true); }} />`;
+  } else body = html`<img src=${src} alt=${label} style="opacity:0" onError=${() => { SPRITES_OK = false; setBad(true); }} />`;
+  return html`<span class=${"spr" + (box && !bad ? " fit" : "")} style=${`width:${size}px;height:${size}px`} title=${label}>${body}
     ${shiny && html`<span class="star" aria-hidden="true">✦</span>`}</span>`;
 }
 const TypePill = ({ t }) => html`<span class="tp" style=${`background:${TYPE_COL[t] || "#888"}`}>${t}</span>`;
 const Bar = ({ pct, cls = "" }) => html`<div class=${"bar " + cls}><i style=${`width:${Math.max(0, Math.min(100, pct * 100))}%`}></i></div>`;
+function setTheme(t) { document.documentElement.dataset.theme = t; try { localStorage.setItem("pl.theme", t); } catch (e) {}
+  const mc = document.querySelector('meta[name="theme-color"]'); if (mc) mc.setAttribute("content", t === "dark" ? "#1d1c1a" : "#e3350d"); go(); }
+const curTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 const ShinyTag = ({ m }) => m && m.shiny ? html` <span class="shiny-tag" title="Shiny">✦</span>` : null;
 
 const IC = {
@@ -58,13 +85,17 @@ function Home() {
   const gi = currentGym(); const gym = PL.GYMS[gi]; const allBadges = g.badges.g7;
   let nextOpp = 0; while (nextOpp < 3 && oppUnlocked(gi, nextOpp + 1)) nextOpp++;
   return html`<div class="wrap">
-    <div class="top"><div class="grow"><div class="sub">${fmtDate(Date.now(), { weekday: "long", month: "long", day: "numeric" })}</div><h1>PokéLift</h1></div>
+    <div class="top"><span class="lens" aria-hidden="true"></span><div class="grow"><div class="sub">${fmtDate(Date.now(), { weekday: "long", month: "long", day: "numeric" })}</div><h1>PokéLift</h1></div>
+      <span class="leds" aria-hidden="true"><i style="background:#ff5a4e"></i><i style="background:#ffd23f"></i><i style="background:#4cd07d"></i></span>
       <button aria-label="Settings" class="btn sm" onClick=${() => openSheet(Settings)}>${IC.gear}</button></div>
-    ${a && html`<button class="card row" style="width:100%;text-align:left;gap:14px" onClick=${() => openSheet(MonSheet, { uid: a.uid })}>
-      <${Sprite} sp=${a.sp} size=${84} shiny=${a.shiny} />
-      <div class="grow"><div class="tiny faint b" style="text-transform:uppercase;letter-spacing:.06em">Active · gets full XP</div>
-        <div class="row" style="gap:8px;margin:2px 0 6px"><span style="font-size:20px;font-weight:700">${monName(a)}<${ShinyTag} m=${a} /></span><span class="muted num">Lv ${a.lv}</span></div>
-        <${Bar} pct=${PL.xpProgress(a).pct} /><div class="tiny muted num" style="margin-top:4px">${a.lv >= 100 ? "Max level" : PL.xpProgress(a).toNext.toLocaleString() + " XP to Lv " + (a.lv + 1)}</div></div></button>`}
+    ${a && html`<button class="card hero" onClick=${() => openSheet(MonSheet, { uid: a.uid })}>
+      <div class="stage"><${Sprite} sp=${a.sp} size=${146} shiny=${a.shiny} /></div>
+      <div style="min-width:0"><div class="tag">Active · full XP</div>
+        <div class="nm">${monName(a)}<${ShinyTag} m=${a} /></div>
+        <div class="row" style="gap:6px;flex-wrap:wrap"><span class="lvtag">Lv${a.lv}</span>${PL.mon(a.sp).t.map(t => html`<${TypePill} t=${t} />`)}</div>
+        <div class="expl"><b>EXP</b><${Bar} pct=${PL.xpProgress(a).pct} /></div>
+        <div class="tiny muted num" style="margin-top:5px">${a.lv >= 100 ? "Max level" : PL.xpProgress(a).toNext.toLocaleString() + " XP to Lv " + (a.lv + 1)}</div></div></button>
+      <${PartyRow} g=${g} />`}
     <h2 class="sec">Today</h2>
     <div class="stack">
       ${today.map(e => { const t = tpl(e.tpl); const done = S.sessions.some(s => s.sched === e.id);
@@ -86,6 +117,15 @@ function Home() {
       ${g.bank > 0 && html`<button class="card row" style="width:100%;text-align:left" onClick=${() => { U.tab = "team"; U.teamSeg = "party"; go(); }}><div class="grow"><div class="b">XP Bank</div><div class="small muted num">${fmtLv(g.bank)} ready to give to any Pokémon</div></div><span class="chev">›</span></button>`}
     </div>
   </div>`;
+}
+
+function PartyRow({ g }) {
+  const rest = g.party.filter(u => u !== g.active).map(monOf).filter(Boolean);
+  const slots = Array.from({ length: 5 }, (_, i) => rest[i] || null);
+  return html`<div class="party5">${slots.map(m => m
+    ? html`<button class="pslot" aria-label=${`${monName(m)}, level ${m.lv}`} onClick=${() => openSheet(MonSheet, { uid: m.uid })}>
+        <${Sprite} sp=${m.sp} size=${52} shiny=${m.shiny} /><span class="lv">Lv${m.lv}</span><${Bar} pct=${PL.xpProgress(m).pct} /></button>`
+    : html`<button class="pslot empty" aria-label="Empty party slot" onClick=${() => { U.tab = "team"; U.teamSeg = "box"; go(); }}><i></i></button>`)}</div>`;
 }
 
 /* ---------------- Plan (calendar) ---------------- */
@@ -241,24 +281,90 @@ function ExerciseHistory({ id }) {
   const load = (s, bw) => PL.setLoad(e, s, bw);
   const pts = [...rows].reverse().map(r => ({ d: r.date, v: Math.max(0, ...r.sets.map(s => PL.e1rm(load(s, r.bw), +s.r || 0))) })).filter(p => p.v > 0);
   let best = null; for (const r of rows) for (const s of r.sets) { const v = PL.e1rm(load(s, r.bw), +s.r || 0); if (!best || v > best.v) best = { v, s, d: r.date }; }
-  const W = 320, H = 120, P = 6;
-  const mn = pts.length ? Math.min(...pts.map(p => p.v)) : 0, mx = pts.length ? Math.max(...pts.map(p => p.v)) : 1;
-  const xy = (p, i) => [P + (pts.length > 1 ? i / (pts.length - 1) : .5) * (W - 2 * P), H - P - (mx === mn ? .5 : (p.v - mn) / (mx - mn)) * (H - 2 * P)];
-  const path = pts.map((p, i) => (i ? "L" : "M") + xy(p, i).map(n => n.toFixed(1)).join(" ")).join("");
   const isLoad = e.kind === "weight" || e.kind === "bw";
   return html`<${Sheet} title=${e.name}>
     <div class="row" style="gap:8px;margin-top:-6px;margin-bottom:12px"><span class="chip">${e.muscle || "Exercise"}</span>${e.kind === "bw" && html`<span class="chip">Bodyweight ${Math.round(e.mod * 100)}%</span>`}
       <span class="grow"></span><button class="btn sm" onClick=${() => openSheet(NewExercise, { id })}>Edit</button></div>
     ${isLoad && best && html`<div class="stat-grid" style="grid-template-columns:1fr 1fr"><div class="tile"><div class="k">Best set</div><div class="v">${setStr(e, best.s)}</div><div class="tiny muted">${fmtDate(best.d)}</div></div>
       <div class="tile"><div class="k">Est. 1-rep max</div><div class="v">${Math.round(best.v)}<span class="small muted"> lb</span></div><div class="tiny muted">Epley formula</div></div></div>`}
-    ${isLoad && pts.length > 1 && html`<h2 class="sec">Est. 1RM over time</h2><div class="card" style="padding:10px"><svg viewBox=${`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Estimated one-rep max trend">
-      <path d=${path + `L${xy(pts[pts.length - 1], pts.length - 1)[0]} ${H}L${P} ${H}Z`} fill="var(--blue)" opacity=".1"/><path d=${path} fill="none" stroke="var(--blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      ${(() => { const [x, y] = xy(pts[pts.length - 1], pts.length - 1); return html`<circle cx=${x} cy=${y} r="4" fill="var(--blue)" stroke="var(--card)" stroke-width="2"/>`; })()}</svg>
-      <div class="row tiny muted num"><span class="grow">${fmtDate(pts[0].d, { month: "short", day: "numeric" })} · ${Math.round(mn)} lb</span><span>${Math.round(mx)} lb</span></div></div>`}
+    ${isLoad && pts.length > 0 && html`<h2 class="sec">Strength progress</h2><${E1RMChart} pts=${pts} />`}
     <h2 class="sec">History</h2>
     ${rows.length ? html`<div class="list">${rows.map(r => html`<div class="li" style="align-items:flex-start"><div class="small b" style="width:84px;flex:none">${fmtDate(r.date, { month: "short", day: "numeric" })}</div>
       <div class="grow small num">${r.all.map(s => html`<span class="chip" style=${"margin:0 4px 4px 0;" + (s.warm ? "opacity:.6" : "")}>${s.warm ? "W " : ""}${setStr(e, s)}</span>`)}</div></div>`)}</div>`
       : html`<div class="card empty small">No sets logged yet.</div>`}<//>`;
+}
+/* Estimated 1RM chart: last 3 months + 3-month projection, or all time. Swipe or toggle to switch. */
+const DAY = 864e5;
+function niceStep(span, n) { const raw = span / n, m = Math.pow(10, Math.floor(Math.log10(raw))); for (const k of [1, 2, 2.5, 5, 10]) if (k * m >= raw) return k * m; return 10 * m; }
+function fitTrend(pts) { // least squares on lb vs day; returns {a, b} with value = a + b*day
+  const n = pts.length, xs = pts.map(p => p.d / DAY), mx = xs.reduce((a, b) => a + b, 0) / n, my = pts.reduce((a, p) => a + p.v, 0) / n;
+  let sxx = 0, sxy = 0; xs.forEach((x, i) => { sxx += (x - mx) ** 2; sxy += (x - mx) * (pts[i].v - my); });
+  const b = sxx ? sxy / sxx : 0; return { a: my - b * mx, b };
+}
+function E1RMChart({ pts }) {
+  const [range, setRange] = useState("3m"); const [hi, setHi] = useState(null); const sw = useRef(null);
+  const now = Date.now(), last = pts[pts.length - 1];
+  // projection from the last ~3 months of sessions (needs 3+ sessions over 2+ weeks); weekly change capped at ±2% of the current estimate
+  const recent = pts.filter(p => p.d >= now - 90 * DAY);
+  let proj = null;
+  if (recent.length >= 3 && recent[recent.length - 1].d - recent[0].d >= 14 * DAY) {
+    const f = fitTrend(recent), cap = last.v * .02 / 7, b = Math.max(-cap, Math.min(cap, f.b));
+    const v0 = f.a + f.b * (now / DAY); proj = { d0: now, v0, d1: now + 90 * DAY, v1: v0 + b * 90, perWk: b * 7 };
+  }
+  const show = range === "3m" ? (recent.length ? recent : [last]) : pts;
+  const x0 = range === "3m" ? now - 90 * DAY : Math.min(pts[0].d, now - 30 * DAY);
+  const x1 = range === "3m" ? (proj ? proj.d1 : now + 14 * DAY) : now + 7 * DAY;
+  const vals = show.map(p => p.v).concat(range === "3m" && proj ? [proj.v0, proj.v1] : []);
+  let lo = Math.min(...vals), up = Math.max(...vals); const pad = Math.max(5, (up - lo) * .12); lo -= pad; up += pad;
+  const ys = niceStep(up - lo, 4); lo = Math.floor(lo / ys) * ys; up = Math.ceil(up / ys) * ys;
+  const W = 340, H = 232, L = 46, R = 12, T = 14, B = 44;
+  const X = d => L + (d - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - lo) / (up - lo)) * (H - T - B);
+  const yt = []; for (let v = lo; v <= up + 1e-6; v += ys) yt.push(v);
+  // month ticks, thinned so labels never collide
+  const span = (x1 - x0) / (30 * DAY), every = span <= 7 ? 1 : span <= 14 ? 2 : span <= 24 ? 3 : 6;
+  const xt = []; const dd = new Date(x0); dd.setDate(1); dd.setHours(0, 0, 0, 0); dd.setMonth(dd.getMonth() + 1);
+  const multiYear = new Date(x0).getFullYear() !== new Date(x1).getFullYear();
+  for (; dd.getTime() <= x1; dd.setMonth(dd.getMonth() + every)) xt.push(dd.getTime());
+  const mlab = t => { const d = new Date(t); const m = d.toLocaleDateString(undefined, { month: "short" }); return multiYear && (d.getMonth() === 0 || t === xt[0]) ? `${m} ’${String(d.getFullYear()).slice(2)}` : m; };
+  const line = show.map((p, i) => (i ? "L" : "M") + X(p.d).toFixed(1) + " " + Y(p.v).toFixed(1)).join("");
+  const first = show[0]; const gain = last.v - first.v;
+  const pick = ev => { const r = ev.currentTarget.getBoundingClientRect(); const px = (ev.clientX - r.left) / r.width * W;
+    let best = null, bd = 1e9; show.forEach(p => { const d = Math.abs(X(p.d) - px); if (d < bd) { bd = d; best = p; } }); setHi(bd < 30 ? best : null); };
+  const tStart = e => { sw.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+  const tEnd = e => { const s0 = sw.current; sw.current = null; if (!s0) return; const dx = e.changedTouches[0].clientX - s0.x, dy = e.changedTouches[0].clientY - s0.y;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { setHi(null); setRange(dx < 0 ? "all" : "3m"); } };
+  const fd = (t, o = { month: "short", day: "numeric" }) => fmtDate(t, o);
+  const tip = hi && (() => { const tx = Math.min(Math.max(X(hi.d), L + 58), W - R - 58), ty = Y(hi.v) - 14 < T + 30 ? Y(hi.v) + 14 : Y(hi.v) - 44;
+    return html`<g pointer-events="none"><line x1=${X(hi.d)} x2=${X(hi.d)} y1=${T} y2=${H - B} stroke="var(--fg3)" stroke-width="1"/>
+      <rect x=${tx - 56} y=${ty} width="112" height="34" rx="7" fill="var(--fg)"/><text x=${tx} y=${ty + 14} text-anchor="middle" class="ct-tip b">${Math.round(hi.v)} lb</text>
+      <text x=${tx} y=${ty + 27} text-anchor="middle" class="ct-tip">${fd(hi.d, { month: "short", day: "numeric", year: "numeric" })}</text></g>`; })();
+  return html`<div class="card ct" style="padding:12px 10px 10px">
+    <div class="row" style="gap:8px;padding:0 4px 8px"><div class="grow">
+        <div class="ct-big num">${Math.round(last.v)}<span> lb</span></div>
+        <div class="tiny muted num">${range === "3m" ? (show.length > 1 ? `${gain >= 0 ? "+" : "−"}${Math.abs(Math.round(gain))} lb since ${fd(first.d)}` : "Latest estimate") : `${gain >= 0 ? "+" : "−"}${Math.abs(Math.round(gain))} lb since ${fd(first.d, { month: "short", year: "numeric" })}`}</div></div>
+      <div class="seg" style="width:150px" role="group" aria-label="Time range"><button class=${range === "3m" ? "on" : ""} onClick=${() => { setRange("3m"); setHi(null); }}>3 months</button><button class=${range === "all" ? "on" : ""} onClick=${() => { setRange("all"); setHi(null); }}>All time</button></div></div>
+    <svg viewBox=${`0 0 ${W} ${H}`} width="100%" role="img" style="touch-action:pan-y;display:block" onPointerDown=${pick} onPointerMove=${e => e.buttons || e.pointerType === "mouse" ? pick(e) : null} onPointerLeave=${() => setHi(null)} onTouchStart=${tStart} onTouchEnd=${tEnd}
+      aria-label=${`Estimated one-rep max, ${range === "3m" ? "last 3 months with 3-month projection" : "all time"}. Latest ${Math.round(last.v)} pounds.`}>
+      ${yt.map(v => html`<line x1=${L} x2=${W - R} y1=${Y(v)} y2=${Y(v)} stroke="var(--line)" stroke-width="1"/><text x=${L - 6} y=${Y(v) + 4} text-anchor="end" class="ct-ax">${Math.round(v)}</text>`)}
+      ${xt.map(t => html`<line x1=${X(t)} x2=${X(t)} y1=${H - B} y2=${H - B + 4} stroke="var(--fg3)"/><text x=${X(t)} y=${H - B + 16} text-anchor="middle" class="ct-ax">${mlab(t)}</text>`)}
+      <line x1=${L} x2=${W - R} y1=${H - B} y2=${H - B} stroke="var(--fg3)" stroke-width="1"/>
+      <text transform=${`translate(11 ${(T + H - B) / 2}) rotate(-90)`} text-anchor="middle" class="ct-at">Est. 1RM (lb)</text>
+      <text x=${(L + W - R) / 2} y=${H - 6} text-anchor="middle" class="ct-at">Date</text>
+      ${range === "3m" && proj && html`<rect x=${X(now)} y=${T} width=${X(proj.d1) - X(now)} height=${H - B - T} fill="var(--sunk)" opacity=".6"/>
+        <text x=${(X(now) + X(proj.d1)) / 2} y=${T + 11} text-anchor="middle" class="ct-ax">Projected</text>`}
+      <line x1=${X(now)} x2=${X(now)} y1=${T} y2=${H - B} stroke="var(--fg3)" stroke-width="1" stroke-dasharray="2 3"/>
+      <text x=${X(now)} y=${H - B - 5} text-anchor=${range === "3m" ? "end" : "end"} dx="-4" class="ct-ax">Today</text>
+      ${range === "3m" && proj && html`<path d=${`M${X(last.d)} ${Y(last.v)}L${X(proj.d1)} ${Y(proj.v1)}`} fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>
+        <circle cx=${X(proj.d1)} cy=${Y(proj.v1)} r="4" fill="var(--card)" stroke="var(--red)" stroke-width="2"/>
+        <text x=${X(proj.d1) - 6} y=${Y(proj.v1) + (proj.v1 >= last.v ? -9 : 17)} text-anchor="end" class="ct-lab">~${Math.round(proj.v1)}</text>`}
+      ${show.length > 1 && html`<path d=${line} fill="none" stroke="var(--red)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`}
+      ${(show.length <= 16 ? show : [last]).map(p => html`<circle cx=${X(p.d)} cy=${Y(p.v)} r="3.5" fill="var(--red)"/>`)}
+      ${hi && html`<circle cx=${X(hi.d)} cy=${Y(hi.v)} r="5.5" fill="var(--red)" stroke="var(--card)" stroke-width="2"/>`}
+      ${tip}
+    </svg>
+    <div class="ct-key tiny muted"><span><i class="k-solid"></i>Each workout</span>${range === "3m" && proj && html`<span><i class="k-dash"></i>Projected at your pace</span>`}</div>
+    <p class="tiny muted" style="margin:8px 4px 0">${range === "3m" ? (proj ? html`At your recent pace (${proj.perWk >= 0 ? "+" : "−"}${Math.abs(proj.perWk).toFixed(1)} lb/week) you'd reach about <b class="num" style="color:var(--fg)">${Math.round(proj.v1)} lb</b> by ${fd(proj.d1)}. ` : "Log this lift 3+ times over 2+ weeks to see a projection. ") : ""}Estimated 1RM is the most you could lift for one rep, worked out from your best set each workout. Swipe the chart or tap a point for details.</p>
+  </div>`;
 }
 function SessionList() {
   const ss = [...S.sessions].sort((a, b) => b.end - a.end);
@@ -312,7 +418,9 @@ function Settings() {
     setCsv(text);
   };
   return html`<${Sheet} title="Settings">
-    <label class="l" for="set-bw" style="margin-top:0">Bodyweight (lb)</label>
+    <label class="l" style="margin-top:0">Appearance</label>
+    <div class="seg" role="group" aria-label="Appearance"><button class=${curTheme() === "light" ? "on" : ""} onClick=${() => setTheme("light")}>Light</button><button class=${curTheme() === "dark" ? "on" : ""} onClick=${() => setTheme("dark")}>Dark</button></div>
+    <label class="l" for="set-bw">Bodyweight (lb)</label>
     <div class="row"><input id="set-bw" class="f num" inputmode="decimal" value=${bw} onInput=${e => setBw(e.target.value)} />
       <button class="btn" onClick=${() => { const n = parseFloat(bw); if (n > 0) { mutate(() => { st.bw = n; S.core.bwlog.push({ d: Date.now(), w: n }); }); toast("Bodyweight saved"); } }}>Save</button></div>
     <p class="tiny muted">Pull-ups count 100% of this per rep, push-ups 65%. Each workout uses the latest value.</p>
@@ -320,6 +428,7 @@ function Settings() {
     <p class="tiny muted">Every ${st.lbPerLevel.toLocaleString()} lb you lift is worth 1 level to your active Pokémon, at any level. A ${fmtVol(st.lbPerLevel * .75)} lb workout = ¾ of a level. Changing this only affects future workouts.</p>
     <label class="l" for="set-share">Party share (% of your pounds the rest of the party gets)</label><input id="set-share" class="f num" inputmode="numeric" value=${Math.round(st.share * 100)} onChange=${e => num("share", e.target.value, v => parseFloat(v) / 100)} />
     <label class="l" for="set-rest">Default rest timer (seconds)</label><input id="set-rest" class="f num" inputmode="numeric" value=${st.rest} onChange=${e => num("rest", e.target.value, v => parseInt(v))} />
+    <button class="btn wide" style="margin-top:16px" onClick=${() => { closeAll(); U.prof = { pages: ["Back for a refresher? Excellent dedication! Here's how PokéLift works.", ...profRules()], i: 0 }; U.layer = "prof"; go(); }}>Replay ${PROF}'s tutorial</button>
     <h2 class="sec">Steps</h2>
     <button class="btn wide" onClick=${() => openSheet(WalkSheet)}>Steps and iPhone sync</button>
     <h2 class="sec">Data</h2>
