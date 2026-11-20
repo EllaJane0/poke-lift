@@ -87,7 +87,6 @@ function Home() {
   let nextOpp = 0; while (nextOpp < 3 && oppUnlocked(gi, nextOpp + 1)) nextOpp++;
   return html`<div class="wrap">
     <div class="top"><span class="lens" aria-hidden="true"></span><div class="grow"><div class="sub">${fmtDate(Date.now(), { weekday: "long", month: "long", day: "numeric" })}</div><h1>PokéLift</h1></div>
-      <span class="leds" aria-hidden="true"><i style="background:#ff5a4e"></i><i style="background:#ffd23f"></i><i style="background:#4cd07d"></i></span>
       <button aria-label="Settings" class="btn sm" onClick=${() => openSheet(Settings)}>${IC.gear}</button></div>
     ${a && html`<button class="card hero" onClick=${() => openSheet(MonSheet, { uid: a.uid })}>
       <div class="stage"><${Sprite} sp=${a.sp} size=${146} shiny=${a.shiny} /></div>
