@@ -289,6 +289,7 @@ function ExerciseHistory({ id }) {
   return html`<${Sheet} title=${e.name}>
     <div class="row" style="gap:8px;margin-top:-6px;margin-bottom:12px"><span class="chip">${e.muscle || "Exercise"}</span>${e.kind === "bw" && html`<span class="chip">Bodyweight ${Math.round(e.mod * 100)}%</span>`}
       <span class="grow"></span><button class="btn sm" onClick=${() => openSheet(NewExercise, { id })}>Edit</button></div>
+    <${FormGuide} e=${e} />
     ${isLoad && best && html`<div class="stat-grid" style="grid-template-columns:1fr 1fr"><div class="tile"><div class="k">Best set</div><div class="v">${setStr(e, best.s)}</div><div class="tiny muted">${fmtDate(best.d)}</div></div>
       <div class="tile"><div class="k">Est. 1-rep max</div><div class="v">${Math.round(best.v)}<span class="small muted"> lb</span></div><div class="tiny muted">Epley formula</div></div></div>`}
     ${isLoad && pts.length > 0 && html`<h2 class="sec">Strength progress</h2><${E1RMChart} pts=${pts} />`}
@@ -369,6 +370,19 @@ function E1RMChart({ pts }) {
     <div class="ct-key tiny muted"><span><i class="k-solid"></i>Each workout</span>${range === "3m" && proj && html`<span><i class="k-dash"></i>Projected at your pace</span>`}</div>
     <p class="tiny muted" style="margin:8px 4px 0">${range === "3m" ? (proj ? html`At your recent pace (${proj.perWk >= 0 ? "+" : "−"}${Math.abs(proj.perWk).toFixed(1)} lb/week) you'd reach about <b class="num" style="color:var(--fg)">${Math.round(proj.v1)} lb</b> by ${fd(proj.d1)}. ` : "Log this lift 3+ times over 2+ weeks to see a projection. ") : ""}Estimated 1RM is the most you could lift for one rep, worked out from your best set each workout. Swipe the chart or tap a point for details.</p>
   </div>`;
+}
+/* How-to: a verified YouTube tutorial per built-in exercise, plus form tips for the technical ones */
+const GUIDE = window.__GUIDE__ || {};
+function FormGuide({ e }) {
+  const gd = GUIDE[e.id];
+  const search = "https://www.youtube.com/results?search_query=" + encodeURIComponent(`how to ${e.name} proper form`);
+  if (!gd) return html`<a class="btn wide" style="margin-bottom:6px" href=${search} target="_blank" rel="noopener">Find a form video on YouTube ↗</a>`;
+  const title = gd.t.replace(/^[^A-Za-z0-9“"(]+/, "").replace(/\s*#\S+/g, "").trim();
+  return html`<h2 class="sec" style="margin-top:4px">How to do it</h2>
+    <a class="card vid" href=${"https://www.youtube.com/watch?v=" + gd.v} target="_blank" rel="noopener" aria-label=${`Watch tutorial on YouTube: ${title}`}>
+      <span class="vid-th"><img src=${`https://i.ytimg.com/vi/${gd.v}/mqdefault.jpg`} alt="" loading="lazy" /><i class="vid-play" aria-hidden="true"></i></span>
+      <span class="vid-meta"><span class="vid-t">${title}</span><span class="tiny muted">${gd.c} · YouTube ↗</span></span></a>
+    ${gd.tips && html`<div class="card tips"><div class="tips-h">Form tips</div><ul>${gd.tips.map(t => html`<li>${t}</li>`)}</ul></div>`}`;
 }
 function SessionList() {
   const ss = [...S.sessions].sort((a, b) => b.end - a.end);

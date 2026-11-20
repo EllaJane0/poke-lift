@@ -77,7 +77,7 @@ function ExerciseCard({ it, idx, last }) {
     <div class="hd"><div class="grow" style="min-width:0"><button class="nm" onClick=${() => openSheet(ExerciseHistory, { id: it.ex })}>${e.name}</button>
       <div class="tiny muted">${t.sets ? `Target ${t.sets} × ${t.reps || "?"}` : ""}${t.sets && last ? " · " : ""}${last ? "Last " + fmtDate(last.date, { month: "short", day: "numeric" }) : t.sets ? "" : "First time"}${e.kind === "bw" ? ` · ${Math.round(e.mod * 100)}% BW` : ""} · rest ${restSec}s</div></div>
       <button class="btn sm" aria-label="Exercise options" onClick=${() => openSheet(Menu, { title: e.name, items: [
-        ["View history", () => openSheet(ExerciseHistory, { id: it.ex })],
+        ["How to & history", () => openSheet(ExerciseHistory, { id: it.ex })],
         ["Swap exercise", () => openSheet(ExercisePicker, { title: "Swap for", onPick: id => { a.items[idx] = { ...mkItem(id, it.target, it.note), k: it.k }; touchA(); } })],
         idx > 0 && ["Move up", () => move(-1)], idx < a.items.length - 1 && ["Move down", () => move(1)],
         ["Rest timer…", () => openSheet(RestPick, { exId: it.ex })],

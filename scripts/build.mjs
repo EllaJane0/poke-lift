@@ -23,6 +23,7 @@ ${r("src/head.html")}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script>window.PL_CONFIG=${config};</script>
 <script>window.__GAME__=${r("data/game-data.json").trim()};</script>
+<script>window.__GUIDE__=${r("data/exercise-guide.json").trim()};</script>
 <script>
 ${js}
 </script>
