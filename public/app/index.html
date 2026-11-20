@@ -489,7 +489,21 @@ const GYMS = [
   T("Cooltrainer Samuel","easy",[["Sandslash",44],["Dugtrio",44]]), T("Tamer Jason","medium",[["Rhyhorn",46],["Nidorino",46],["Nidorina",46]]),
   T("Cooltrainer Yuji","hard",[["Nidoking",48],["Nidoqueen",48],["Rhyhorn",48]]), T("Leader Giovanni","leader",[["Rhyhorn",48],["Dugtrio",49],["Nidoqueen",50],["Nidoking",50],["Rhydon",53]])]},
 ];
-const TIER = { easy:{ iv:0, label:"Easy", egg:"common" }, medium:{ iv:10, label:"Medium", egg:"common" }, hard:{ iv:20, label:"Hard", egg:"uncommon" }, leader:{ iv:31, label:"Very hard", egg:"rare" } };
+const TIER = { easy:{ iv:0, label:"Easy", egg:"common" }, medium:{ iv:10, label:"Medium", egg:"common" }, hard:{ iv:20, label:"Hard", egg:"uncommon" }, leader:{ iv:25, shaped:true, label:"Very hard", egg:"rare" } };
+/* Gym Leader IVs: average exactly `avg` (sum = 6*avg), spread to follow the species' base stats,
+   so a Pokémon's best stats get the highest IVs and its weakest get the lowest. Deterministic per species. */
+function shapedIVs(sp, avg = 25) {
+  const b = mon(sp).b, mean = b.reduce((x, y) => x + y, 0) / 6, rng = Math.max(...b) - Math.min(...b) || 1;
+  const iv = b.map(v => Math.max(0, Math.min(31, Math.round(avg + 12 * (v - mean) / rng))));
+  const order = b.map((v, i) => i).sort((i, j) => b[j] - b[i] || i - j); // strongest stat first
+  let diff = avg * 6 - iv.reduce((x, y) => x + y, 0);
+  for (let guard = 0; diff !== 0 && guard < 200; guard++) {
+    const list = diff > 0 ? order : [...order].reverse(); // add to strong stats, take from weak ones
+    for (const i of list) { if (diff === 0) break;
+      if (diff > 0 && iv[i] < 31) { iv[i]++; diff--; } else if (diff < 0 && iv[i] > 0) { iv[i]--; diff++; } }
+  }
+  return iv;
+}
 const POOLS = {
   common: "Caterpie,Weedle,Pidgey,Rattata,Spearow,Ekans,Sandshrew,Nidoran♀,Nidoran♂,Zubat,Oddish,Paras,Venonat,Diglett,Meowth,Psyduck,Mankey,Poliwag,Bellsprout,Tentacool,Geodude,Magnemite,Doduo,Krabby,Voltorb,Horsea,Goldeen,Shellder,Magikarp".split(",").map(sid),
   uncommon: "Pikachu,Clefairy,Jigglypuff,Vulpix,Growlithe,Abra,Machop,Ponyta,Slowpoke,Seel,Grimer,Gastly,Onix,Drowzee,Exeggcute,Cubone,Koffing,Rhyhorn,Tangela,Staryu,Farfetch'd,Lickitung,Hitmonlee,Hitmonchan,Mr. Mime,Jynx,Electabuzz,Magmar,Pinsir".split(",").map(sid),
@@ -548,7 +562,7 @@ function battler(src, side) {
 function newBattle(myMons, gymIdx, oppIdx, rng = Math.random) {
   const opp = GYMS[gymIdx].ladder[oppIdx], iv = TIER[opp.tier].iv;
   return { gymIdx, oppIdx, tier: opp.tier, foe: opp.cls, rng, turn: 0, over: null,
-    mine: myMons.map(m => battler(m, "me")), theirs: opp.team.map(([sp, lv]) => battler({ sp, lv, iv: Array(6).fill(iv), moves: movesAt(sp, lv) }, "foe")),
+    mine: myMons.map(m => battler(m, "me")), theirs: opp.team.map(([sp, lv]) => battler({ sp, lv, iv: TIER[opp.tier].shaped ? shapedIVs(sp, iv) : Array(6).fill(iv), moves: movesAt(sp, lv) }, "foe")),
     a: 0, b: 0, screens: { me:{ ref:0, ls:0 }, foe:{ ref:0, ls:0 } }, dmgLog: [], switchedOnce: {} };
 }
 const effSpe = m => m.st[5] * STG(m.stg.spe) * (m.status === "par" ? 0.25 : 1);
@@ -756,7 +770,7 @@ function lossInsight(B) {
   return `${mon(top.by).n}'s ${move(top.move).n} hit hardest${top.eff > 1 ? " (super effective)" : ""}.`;
 }
 
-return { G, TYPES, TC, eff, mon, move, sid, expFor, growthName, calcStats, movesAt, newMon, randIV, uid, awardXP, removeXP, levelsToXP, lbToXP, evoOptions, evolve, relearnable, xpProgress,
+return { G, TYPES, TC, eff, mon, move, sid, expFor, growthName, calcStats, movesAt, newMon, randIV, shapedIVs, uid, awardXP, removeXP, levelsToXP, lbToXP, evoOptions, evolve, relearnable, xpProgress,
   setLoad, sessionVolume, e1rm, buildHistory, lastFor, isPR, priorSetsFor,
   GYMS, TIER, POOLS, EGG, MILESTONES, STEP_GOAL, ENCOUNTER_ODDS, addDay, totalSteps, shinyChance, encounterLevel, evolveTo, rollEncounter, TRAINER_LV, newBattle, runTurn, aiChoose, doSwitch, effSpe, estDamage, lossInsight, battler };
 })();
