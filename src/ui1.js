@@ -53,6 +53,7 @@ const curTheme = () => document.documentElement.dataset.theme === "dark" ? "dark
 const ShinyTag = ({ m }) => m && m.shiny ? html` <span class="shiny-tag" title="Shiny">✦</span>` : null;
 
 const IC = {
+  bug: html`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M12 8v3.5M12 13.6v.1"/></svg>`,
   home: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>`,
   plan: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>`,
   lift: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 7v10M3.5 9.5v5M18 7v10M20.5 9.5v5M6 12h12"/></svg>`,
@@ -384,6 +385,32 @@ function FormGuide({ e }) {
       <span class="vid-meta"><span class="vid-t">${title}</span><span class="tiny muted">${gd.c} · YouTube ↗</span></span></a>
     ${gd.tips && html`<div class="card tips"><div class="tips-h">Form tips</div><ul>${gd.tips.map(t => html`<li>${t}</li>`)}</ul></div>`}`;
 }
+/* Feedback: bug reports and feature ideas go to the pokelift_feedback table */
+function Feedback({ kind: k0 = "bug" }) {
+  const [kind, setKind] = useState(k0); const [msg, setMsg] = useState(""); const [st, setSt] = useState("idle"); const [err, setErr] = useState("");
+  const where = U.layer ? U.layer : U.tab;
+  const ok = msg.trim().length >= 3 && st !== "sending";
+  const send = async () => {
+    if (!ok) return;
+    if (MODE !== "cloud" || !R.sb) { setSt("error"); setErr("Sending needs an account, and this copy of the app isn't connected to one."); return; }
+    setSt("sending"); setErr("");
+    const device = { ua: navigator.userAgent.slice(0, 300), w: innerWidth, h: innerHeight, theme: curTheme(),
+      standalone: !!(window.matchMedia && matchMedia("(display-mode: standalone)").matches || navigator.standalone), lang: navigator.language, sessions: S.sessions.length };
+    try { const { error } = await R.sb.from("pokelift_feedback").insert({ kind, message: msg.trim().slice(0, 4000), screen: String(where).slice(0, 100), device });
+      if (error) throw error; setSt("sent"); }
+    catch (e) { setSt("error"); setErr(/too many/i.test(e.message || "") ? "You've sent a lot today. Please try again tomorrow." : !navigator.onLine ? "You're offline. Your message is still here, so try again when you're connected." : "Couldn't send right now. Please try again in a bit."); }
+  };
+  if (st === "sent") return html`<${Sheet} title="Thanks!"><p class="muted" style="margin-top:0">${kind === "bug" ? "Your bug report was sent. We'll look into it." : "Your idea was sent. We read every one."}</p>
+    <button class="btn pri wide" onClick=${closeSheet}>Done</button><//>`;
+  return html`<${Sheet} title="Send feedback">
+    <div class="seg" role="group" aria-label="Feedback type">${[["bug", "Bug"], ["idea", "Feature idea"], ["other", "Other"]].map(([k, l]) => html`<button class=${kind === k ? "on" : ""} aria-pressed=${kind === k} onClick=${() => setKind(k)}>${l}</button>`)}</div>
+    <label class="l" for="fb-msg">${kind === "bug" ? "What happened? What did you expect to happen?" : kind === "idea" ? "What would you like PokéLift to do?" : "What's on your mind?"}</label>
+    <textarea id="fb-msg" class="f" style="min-height:140px" maxlength="4000" value=${msg} onInput=${e => setMsg(e.target.value)}
+      placeholder=${kind === "bug" ? "e.g. I finished a workout but my Pokémon didn't get XP. I was on the Push template." : kind === "idea" ? "e.g. Let me trade Pokémon with friends." : ""}></textarea>
+    <p class="tiny muted">${kind === "bug" ? "Steps to make it happen again help a lot. " : ""}We'll also include your device type and app screen so we can track down problems. Your account is attached so we can follow up.</p>
+    ${err && html`<div class="card small" style="border-color:var(--red);color:var(--red-fg);margin-bottom:10px">${err}</div>`}
+    <button class="btn pri wide" disabled=${!ok} onClick=${send}>${st === "sending" ? "Sending…" : "Send"}</button><//>`;
+}
 function SessionList() {
   const ss = [...S.sessions].sort((a, b) => b.end - a.end);
   if (!ss.length) return html`<div class="card empty">Finished workouts show up here.</div>`;
@@ -436,6 +463,7 @@ function Settings() {
     setCsv(text);
   };
   return html`<${Sheet} title="Settings">
+    <button class="btn wide fb-btn" style="margin-bottom:14px" onClick=${() => openSheet(Feedback)}>${IC.bug || ""}Report a bug or suggest a feature</button>
     <label class="l" style="margin-top:0">Appearance</label>
     <div class="seg" role="group" aria-label="Appearance"><button class=${curTheme() === "light" ? "on" : ""} onClick=${() => setTheme("light")}>Light</button><button class=${curTheme() === "dark" ? "on" : ""} onClick=${() => setTheme("dark")}>Dark</button></div>
     <label class="l" for="set-bw">Bodyweight (lb)</label>

@@ -105,3 +105,48 @@ begin
 end $$;
 revoke all on function public.pokelift_report_steps(text, date, numeric) from public, authenticated;
 grant execute on function public.pokelift_report_steps(text, date, numeric) to anon;
+
+-- ---------------------------------------------------------------
+-- Feedback: bug reports and feature ideas sent from Settings.
+-- Signed-in users can send; nobody can read them through the app.
+-- Read them in Supabase: Table Editor → pokelift_feedback.
+-- ---------------------------------------------------------------
+create table if not exists public.pokelift_feedback (
+  id         bigint generated always as identity primary key,
+  user_id    uuid not null references auth.users (id) on delete cascade default auth.uid(),
+  kind       text not null check (kind in ('bug', 'idea', 'other')),
+  message    text not null check (char_length(message) between 3 and 4000),
+  screen     text check (char_length(screen) <= 100),
+  device     jsonb,
+  status     text not null default 'new' check (status in ('new', 'seen', 'planned', 'done', 'wontfix')),
+  created_at timestamptz not null default now()
+);
+create index if not exists pokelift_feedback_created on public.pokelift_feedback (created_at desc);
+create index if not exists pokelift_feedback_user on public.pokelift_feedback (user_id, created_at);
+alter table public.pokelift_feedback enable row level security;
+
+drop policy if exists "send feedback" on public.pokelift_feedback;
+create policy "send feedback" on public.pokelift_feedback
+  for insert to authenticated
+  with check (user_id = (select auth.uid()) and status = 'new');
+grant insert on public.pokelift_feedback to authenticated;
+
+-- at most 20 reports per person per day
+create or replace function public.pokelift_feedback_limit() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if (select count(*) from public.pokelift_feedback
+      where user_id = new.user_id and created_at > now() - interval '1 day') >= 20 then
+    raise exception 'Too many reports today. Please try again tomorrow.';
+  end if;
+  return new;
+end $$;
+revoke execute on function public.pokelift_feedback_limit() from public, anon, authenticated;
+drop trigger if exists pokelift_feedback_limit on public.pokelift_feedback;
+create trigger pokelift_feedback_limit before insert on public.pokelift_feedback
+  for each row execute function public.pokelift_feedback_limit();
+
+-- To see reports with the sender's email:
+--   select f.created_at, f.kind, f.message, f.screen, u.email, f.status
+--   from public.pokelift_feedback f join auth.users u on u.id = f.user_id
+--   order by f.created_at desc;
