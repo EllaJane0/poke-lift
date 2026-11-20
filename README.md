@@ -29,14 +29,14 @@ Each person signs in with their email and a one-time code. Their workouts, templ
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open **SQL Editor → New query**, paste the contents of `supabase/schema.sql`, and click **Run**.
 3. Go to **Authentication → Emails → Templates** and add the code to **both** the **Confirm signup** template (first sign-in) and the **Magic Link** template (every sign-in after), for example the line `Your PokéLift code: {{ .Token }}`. Home-screen apps on iPhone can't receive links from Mail, so people sign in by typing the code.
-4. Go to **Authentication → URL Configuration**, set **Site URL** to your Vercel address (e.g. `https://poke-lift.vercel.app`), and add the same address to **Redirect URLs**. If this is left at the default `http://localhost:3000`, the link in the email sends people to a broken page.
+4. Go to **Authentication → URL Configuration**, set **Site URL** to your Vercel address (e.g. `https://poke-lift.vercel.app`), and add the same address plus `/app/` (e.g. `https://poke-lift.vercel.app/app/`) to **Redirect URLs**. If this is left at the default `http://localhost:3000`, the link in the email sends people to a broken page.
 5. Go to **Project Settings → API** and copy the **Project URL** and the **anon / publishable key**.
 
 **2. Deploy (Vercel)**
 1. In Vercel: **Add New → Project**, import this repo.
 2. Under **Environment Variables**, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` with the values from step 1.5. (If you connect Vercel's Supabase integration instead, its variable names work too.)
 3. Click **Deploy**. Changing environment variables later needs a redeploy to take effect.
-4. Open the site in Safari on your iPhone and tap **Share → Add to Home Screen**.
+4. Open `/app/` in Safari on your iPhone and tap **Share → Add to Home Screen**. (The site root is the marketing homepage; an installed app that opens at `/` is sent on to `/app/`.)
 
 The anon key is meant to be public; row-level security is what keeps each person's data private. Never put the `service_role` key in Vercel for this app.
 
@@ -45,10 +45,11 @@ Without the two environment variables, the app still builds and runs, but in on-
 ## Develop
 
 ```sh
-npm run build        # writes public/index.html from src/ and data/
+npm run build        # writes public/app/index.html from src/ and data/
 npx serve public     # preview locally
 ```
 
+- `public/index.html` – the marketing homepage (static; its buttons go to `/app/`, which shows sign-in when logged out). Images are in `public/img/`.
 - `src/logic.js` – XP, leveling, evolution, workout math, PRs, gyms, battle engine (Gen 3 rules)
 - `src/store.js` – state, per-user local cache, Supabase sign-in and sync (or Claude account storage when run as a claude.ai artifact)
 - `supabase/schema.sql` – tables and row-level security

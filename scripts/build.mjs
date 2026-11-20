@@ -1,4 +1,4 @@
-// Builds public/index.html from src/ and data/. Run: node scripts/build.mjs
+// Builds the app (public/app/index.html) from src/ and data/. The homepage is public/index.html. Run: node scripts/build.mjs
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 const r = p => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 const env = process.env;
@@ -28,6 +28,6 @@ ${js}
 </script>
 </body></html>
 `;
-mkdirSync(new URL("../public", import.meta.url), { recursive: true });
-writeFileSync(new URL("../public/index.html", import.meta.url), html);
-console.log("Built public/index.html (" + Math.round(html.length / 1024) + " KB)");
+mkdirSync(new URL("../public/app", import.meta.url), { recursive: true });
+writeFileSync(new URL("../public/app/index.html", import.meta.url), html);
+console.log("Built public/app/index.html (" + Math.round(html.length / 1024) + " KB)");
