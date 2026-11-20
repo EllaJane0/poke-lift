@@ -200,7 +200,7 @@ function SwitchGrid({ B, forced, onPick, onBack }) {
 const PROF = "Professor Ironwood";
 const PROF_IMG = "/img/professor.png";
 const profRules = () => { const lpl = S.core.settings.lbPerLevel; const sh = Math.round(S.core.settings.share * 100); return [
-  `Your active partner gets the XP from every pound you lift in a workout. Every ${lpl.toLocaleString()} lb lifted is one full level!`,
+  `Your active starter gets the XP from every pound you lift in a workout. Every ${lpl.toLocaleString()} lb lifted is one full level!`,
   `You can carry up to 6 Pokémon. The rest of your party trains alongside you and gets ${sh}% of the XP.`,
   "Log workouts in the Workouts tab. Check off each set as you finish it, and I'll handle the math. Pull-ups and push-ups count your bodyweight too.",
   "Walking pays off as well. Every 10,000 steps, a wild Pokémon appears and you can add it to your team.",
@@ -230,7 +230,7 @@ function Onboard() {
     return html`<${ProfScene} small=${true} text="First, tell me a little about yourself. How much do you weigh?" canNext=${ok} nextLabel="Next" onNext=${() => setI(n + 1)}
       extra=${html`<div class="card"><label class="l" for="ob-bw" style="margin-top:0">Your bodyweight (lb)</label><input id="ob-bw" class="f num" inputmode="decimal" placeholder="180" value=${bw} onInput=${e => setBw(e.target.value)} onKeyDown=${e => { if (e.key === "Enter" && ok) setI(n + 1); }} />
         <p class="tiny muted" style="margin-bottom:0">Used for pull-ups (100% per rep) and push-ups (65%). You can change it anytime in Settings.</p></div>`} />`; }
-  return html`<${ProfScene} small=${true} text=${pick ? `So you want ${PL.mon(pick).n}? Great choice! It starts at level 5.` : "Now, choose your first partner! Each one is ready to train with you."}
+  return html`<${ProfScene} small=${true} text=${pick ? `So you want ${PL.mon(pick).n}? Great choice! It starts at level 5.` : "Now, choose your starter! Each one is ready to train with you."}
     canNext=${!!pick} nextLabel="Start training" onNext=${() => { mutate(() => { S.core.settings.bw = parseFloat(bw); S.core.bwlog.push({ d: Date.now(), w: parseFloat(bw) }); addMon(PL.newMon(pick, 5)); G_().started = true; }); U.prof = { pages: profRules(), i: 0 }; U.layer = "prof"; go(); }}
     extra=${html`<div class="starters">${[1, 4, 7].map(sp => html`<button class=${"card starter" + (pick === sp ? " on" : "")} aria-pressed=${pick === sp} onClick=${() => setPick(sp)}>
       <${Sprite} sp=${sp} size=${76} /><div class="b">${PL.mon(sp).n}</div><div class="row" style="justify-content:center;gap:3px;margin-top:4px;flex-wrap:wrap">${PL.mon(sp).t.map(t => html`<${TypePill} t=${t} />`)}</div></button>`)}</div>`} />`;

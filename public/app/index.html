@@ -179,7 +179,7 @@ ol.steps li{margin:6px 0}
 .app .top .sub{color:color-mix(in srgb,var(--head-fg) 82%,transparent)}
 .app .top .btn{background:rgba(255,255,255,.16);color:var(--head-fg);border-color:rgba(0,0,0,.25);box-shadow:none}
 .app .top .lens{width:34px;height:34px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 35%,#b8e6ff 0 18%,#3fa9f5 19% 60%,#1b6fb8 61%);border:3px solid #fff;box-shadow:0 0 0 2px var(--edge)}
-/* home: active partner */
+/* home: active starter */
 .hero{position:relative;width:100%;text-align:left;display:grid;grid-template-columns:150px 1fr;align-items:center;gap:12px;padding:12px 14px 14px;overflow:hidden}
 .hero .stage{position:relative;height:150px;display:flex;align-items:flex-end;justify-content:center}
 .hero .stage::before{content:"";position:absolute;left:8px;right:8px;bottom:6px;height:22px;border-radius:50%;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--fg) 18%,transparent),transparent 70%)}
@@ -2138,7 +2138,7 @@ function SwitchGrid({ B, forced, onPick, onBack }) {
 const PROF = "Professor Ironwood";
 const PROF_IMG = "/img/professor.png";
 const profRules = () => { const lpl = S.core.settings.lbPerLevel; const sh = Math.round(S.core.settings.share * 100); return [
-  `Your active partner gets the XP from every pound you lift in a workout. Every ${lpl.toLocaleString()} lb lifted is one full level!`,
+  `Your active starter gets the XP from every pound you lift in a workout. Every ${lpl.toLocaleString()} lb lifted is one full level!`,
   `You can carry up to 6 Pokémon. The rest of your party trains alongside you and gets ${sh}% of the XP.`,
   "Log workouts in the Workouts tab. Check off each set as you finish it, and I'll handle the math. Pull-ups and push-ups count your bodyweight too.",
   "Walking pays off as well. Every 10,000 steps, a wild Pokémon appears and you can add it to your team.",
@@ -2168,7 +2168,7 @@ function Onboard() {
     return html`<${ProfScene} small=${true} text="First, tell me a little about yourself. How much do you weigh?" canNext=${ok} nextLabel="Next" onNext=${() => setI(n + 1)}
       extra=${html`<div class="card"><label class="l" for="ob-bw" style="margin-top:0">Your bodyweight (lb)</label><input id="ob-bw" class="f num" inputmode="decimal" placeholder="180" value=${bw} onInput=${e => setBw(e.target.value)} onKeyDown=${e => { if (e.key === "Enter" && ok) setI(n + 1); }} />
         <p class="tiny muted" style="margin-bottom:0">Used for pull-ups (100% per rep) and push-ups (65%). You can change it anytime in Settings.</p></div>`} />`; }
-  return html`<${ProfScene} small=${true} text=${pick ? `So you want ${PL.mon(pick).n}? Great choice! It starts at level 5.` : "Now, choose your first partner! Each one is ready to train with you."}
+  return html`<${ProfScene} small=${true} text=${pick ? `So you want ${PL.mon(pick).n}? Great choice! It starts at level 5.` : "Now, choose your starter! Each one is ready to train with you."}
     canNext=${!!pick} nextLabel="Start training" onNext=${() => { mutate(() => { S.core.settings.bw = parseFloat(bw); S.core.bwlog.push({ d: Date.now(), w: parseFloat(bw) }); addMon(PL.newMon(pick, 5)); G_().started = true; }); U.prof = { pages: profRules(), i: 0 }; U.layer = "prof"; go(); }}
     extra=${html`<div class="starters">${[1, 4, 7].map(sp => html`<button class=${"card starter" + (pick === sp ? " on" : "")} aria-pressed=${pick === sp} onClick=${() => setPick(sp)}>
       <${Sprite} sp=${sp} size=${76} /><div class="b">${PL.mon(sp).n}</div><div class="row" style="justify-content:center;gap:3px;margin-top:4px;flex-wrap:wrap">${PL.mon(sp).t.map(t => html`<${TypePill} t=${t} />`)}</div></button>`)}</div>`} />`;
