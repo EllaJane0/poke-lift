@@ -71,6 +71,7 @@ function ExerciseCard({ it, idx, last }) {
   const repsLbl = e.kind === "time" ? "sec" : e.kind === "distance" ? "mi" : "reps";
   const t = it.target || {};
   const hitAll = last && t.reps && last.sets.length >= (t.sets || 1) && last.sets.every(s => (+s.r || 0) >= t.reps);
+  const goal = useMemo(() => { const rs = PL.repStrength(e, history()[it.ex] || []); return rs ? PL.nextTarget(rs, PL.strengthTrend(rs)) : null; }, [it.ex, S.sessions.length]);
   const move = d => { const j = idx + d; if (j < 0 || j >= a.items.length) return; [a.items[idx], a.items[j]] = [a.items[j], a.items[idx]]; touchA(); };
   const restSec = e.rest || S.core.settings.rest;
   return html`<div class="exc">
@@ -86,7 +87,8 @@ function ExerciseCard({ it, idx, last }) {
         ["Remove exercise", () => { a.items.splice(idx, 1); touchA(); }, "danger"],
       ] })}>${IC.more}</button></div>
     ${it.note && html`<div class="small muted" style="padding:0 14px 6px">${it.note}</div>`}
-    ${hitAll && html`<div class="hint">You hit every rep last time. Try +5 lb or +1 rep.</div>`}
+    ${goal ? html`<div class="hint goal"><span class="goal-k">Next target</span> <b class="num">${targetStr(goal)}</b></div>`
+      : hitAll && html`<div class="hint">You hit every rep last time. Try +5 lb or +1 rep.</div>`}
     <div class="sr h"><span>Set</span><span>Last</span><span>${unit || ""}</span><span>${repsLbl}</span><span></span></div>
     ${it.sets.map((s, i) => html`<${SetRow} key=${it.k + ":" + i + ":" + it.sets.length} it=${it} i=${i} last=${last} e=${e} />`)}
     <button class="addset" onClick=${() => { const p = it.sets[it.sets.length - 1]; const inf = p ? rowInfo(it, it.sets.length - 1, last) : null;

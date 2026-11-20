@@ -110,6 +110,56 @@ function sessionVolume(sess, exMap) {
 }
 const e1rm = (w, r) => r <= 0 ? 0 : r === 1 ? w : w * (1 + r / 30);
 /* history index: exId -> [{sid, date, sets:[working done sets], all:[all done sets]}], newest first */
+/* ---------- rep-strength: "the weight you could lift for your usual reps" ----------
+   Weighted lifts: each session's best working set is converted (Epley) to the rep count you use most,
+   e.g. 190 x 6 -> "what you could do for 8". Bodyweight lifts: reps you could do at bodyweight. */
+const DAYMS = 864e5;
+const round5 = x => Math.round(x / 5) * 5;
+function repStrength(ex, rows) {
+  if (!ex || (ex.kind !== "weight" && ex.kind !== "bw")) return null;
+  const ok = rows.map(r => ({ ...r, sets: r.sets.filter(s => (+s.r || 0) > 0 && (ex.kind === "bw" || (+s.w || 0) > 0)) })).filter(r => r.sets.length);
+  if (!ok.length) return null;
+  if (ex.kind === "bw") {
+    const pts = ok.map(r => { const B = (r.bw || 0) * (ex.mod || 0); let best = null;
+      for (const s of r.sets) { const r0 = +s.r, w = +s.w || 0;
+        const v = B > 0 ? 30 * (((w + B) / B) * (1 + r0 / 30) - 1) : r0; // reps you could do at plain bodyweight
+        if (!best || v > best.v) best = { v, set: s }; }
+      return { d: r.date, v: best.v, set: best.set }; }).sort((a, b) => a.d - b.d);
+    return { unit: "reps", N: null, pts };
+  }
+  const cnt = {}; for (const r of ok) for (const s of r.sets) { const k = Math.min(30, Math.round(+s.r)); cnt[k] = (cnt[k] || 0) + 1; }
+  const N = +Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || a - b)[0];
+  const pts = ok.map(r => { let best = null;
+    for (const s of r.sets) { const v = (+s.w) * (1 + (+s.r) / 30) / (1 + N / 30); if (!best || v > best.v) best = { v, set: s }; }
+    return { d: r.date, v: best.v, set: best.set }; }).sort((a, b) => a.d - b.d);
+  return { unit: "lb", N, pts };
+}
+// Projection from the last 8 weeks only; 4 weeks ahead with a likely range. "few" / "steady" when it shouldn't draw a line up.
+function strengthTrend(rs, now = Date.now()) {
+  if (!rs) return null;
+  const last = rs.pts[rs.pts.length - 1], win = rs.pts.filter(p => p.d >= now - 56 * DAYMS);
+  if (win.length < 3 || win[win.length - 1].d - win[0].d < 14 * DAYMS) return { status: "few", n: win.length };
+  const xs = win.map(p => p.d / DAYMS), n = win.length, mx = xs.reduce((a, b) => a + b, 0) / n, my = win.reduce((a, p) => a + p.v, 0) / n;
+  let sxx = 0, sxy = 0; xs.forEach((x, i) => { sxx += (x - mx) ** 2; sxy += (x - mx) * (win[i].v - my); });
+  let b = sxx ? sxy / sxx : 0; const a = my - b * mx;
+  const sd = Math.sqrt(win.reduce((t, p, i) => t + (p.v - (a + b * xs[i])) ** 2, 0) / Math.max(1, n - 2));
+  const level = a + b * (now / DAYMS);
+  const cap = Math.abs(level) * .02 / 7; b = Math.max(-cap, Math.min(cap, b));
+  const minWk = rs.unit === "lb" ? Math.max(1, level * .0025) : 0.15; // smaller than this per week = holding steady
+  if (b * 7 < minWk) return { status: "steady", level, perWk: b * 7, sd };
+  const floor = rs.unit === "lb" ? 2.5 : 0.5;
+  return { status: "up", d0: now, v0: level, d1: now + 28 * DAYMS, v1: level + b * 28, perWk: b * 7, sd: Math.max(floor, sd),
+    band: t => Math.max(floor, sd) * (1 + (t - now) / (28 * DAYMS) * .6) };
+}
+// What to try next session: +5 lb at your usual reps, or +1 rep at today's weight. Bodyweight: one more rep.
+function nextTarget(rs, tr) {
+  if (!rs) return null;
+  const last = rs.pts[rs.pts.length - 1];
+  const S = Math.max(last.v, tr && tr.status === "up" ? tr.v0 : -Infinity);
+  if (rs.unit === "reps") return { unit: "reps", reps: Math.max(1, Math.floor(S + 1e-6)) + 1 };
+  const base = Math.max(5, round5(S));
+  return { unit: "lb", N: rs.N, a: [base + 5, rs.N], b: [base, rs.N + 1], strength: base };
+}
 function buildHistory(sessions) {
   const h = {};
   const sorted = [...sessions].sort((a, b) => b.end - a.end);
@@ -446,6 +496,6 @@ function lossInsight(B) {
 }
 
 return { G, TYPES, TC, eff, mon, move, sid, expFor, growthName, calcStats, movesAt, newMon, randIV, shapedIVs, uid, awardXP, removeXP, levelsToXP, lbToXP, evoOptions, evolve, relearnable, xpProgress,
-  setLoad, sessionVolume, e1rm, buildHistory, lastFor, isPR, priorSetsFor,
+  setLoad, sessionVolume, e1rm, repStrength, strengthTrend, nextTarget, round5, buildHistory, lastFor, isPR, priorSetsFor,
   GYMS, TIER, POOLS, EGG, MILESTONES, STEP_GOAL, ENCOUNTER_ODDS, addDay, totalSteps, shinyChance, encounterLevel, evolveTo, rollEncounter, TRAINER_LV, newBattle, runTurn, aiChoose, doSwitch, effSpe, estDamage, lossInsight, battler };
 })();

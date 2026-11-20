@@ -283,49 +283,42 @@ function setStr(e, s) {
 function ExerciseHistory({ id }) {
   const e = ex(id); const rows = history()[id] || [];
   const load = (s, bw) => PL.setLoad(e, s, bw);
-  const pts = [...rows].reverse().map(r => ({ d: r.date, v: Math.max(0, ...r.sets.map(s => PL.e1rm(load(s, r.bw), +s.r || 0))) })).filter(p => p.v > 0);
+  const rs = PL.repStrength(e, rows);
   let best = null; for (const r of rows) for (const s of r.sets) { const v = PL.e1rm(load(s, r.bw), +s.r || 0); if (!best || v > best.v) best = { v, s, d: r.date }; }
   const isLoad = e.kind === "weight" || e.kind === "bw";
   return html`<${Sheet} title=${e.name}>
     <div class="row" style="gap:8px;margin-top:-6px;margin-bottom:12px"><span class="chip">${e.muscle || "Exercise"}</span>${e.kind === "bw" && html`<span class="chip">Bodyweight ${Math.round(e.mod * 100)}%</span>`}
       <span class="grow"></span><button class="btn sm" onClick=${() => openSheet(NewExercise, { id })}>Edit</button></div>
     <${FormGuide} e=${e} />
-    ${isLoad && best && html`<div class="stat-grid" style="grid-template-columns:1fr 1fr"><div class="tile"><div class="k">Best set</div><div class="v">${setStr(e, best.s)}</div><div class="tiny muted">${fmtDate(best.d)}</div></div>
-      <div class="tile"><div class="k">Est. 1-rep max</div><div class="v">${Math.round(best.v)}<span class="small muted"> lb</span></div><div class="tiny muted">Epley formula</div></div></div>`}
-    ${isLoad && pts.length > 0 && html`<h2 class="sec">Strength progress</h2><${E1RMChart} pts=${pts} />`}
+    ${isLoad && best && rs && html`<div class="stat-grid" style="grid-template-columns:1fr 1fr"><div class="tile"><div class="k">Best set</div><div class="v">${setStr(e, best.s)}</div><div class="tiny muted">${fmtDate(best.d)}</div></div>
+      <div class="tile"><div class="k">${strengthLabel(rs)}</div><div class="v">${rs.unit === "lb" ? PL.round5(rs.pts[rs.pts.length - 1].v) : Math.round(rs.pts[rs.pts.length - 1].v)}<span class="small muted"> ${rs.unit}</span></div><div class="tiny muted">Latest session</div></div></div>`}
+    ${isLoad && rs && html`<h2 class="sec">Strength progress</h2><${StrengthChart} e=${e} rs=${rs} />`}
     <h2 class="sec">History</h2>
     ${rows.length ? html`<div class="list">${rows.map(r => html`<div class="li" style="align-items:flex-start"><div class="small b" style="width:84px;flex:none">${fmtDate(r.date, { month: "short", day: "numeric" })}</div>
       <div class="grow small num">${r.all.map(s => html`<span class="chip" style=${"margin:0 4px 4px 0;" + (s.warm ? "opacity:.6" : "")}>${s.warm ? "W " : ""}${setStr(e, s)}</span>`)}</div></div>`)}</div>`
       : html`<div class="card empty small">No sets logged yet.</div>`}<//>`;
 }
-/* Estimated 1RM chart: last 3 months + 3-month projection, or all time. Swipe or toggle to switch. */
+/* Rep-strength chart: last 3 months + 4-week projection with a likely range, or all time. Swipe or toggle to switch. */
 const DAY = 864e5;
 function niceStep(span, n) { const raw = span / n, m = Math.pow(10, Math.floor(Math.log10(raw))); for (const k of [1, 2, 2.5, 5, 10]) if (k * m >= raw) return k * m; return 10 * m; }
-function fitTrend(pts) { // least squares on lb vs day; returns {a, b} with value = a + b*day
-  const n = pts.length, xs = pts.map(p => p.d / DAY), mx = xs.reduce((a, b) => a + b, 0) / n, my = pts.reduce((a, p) => a + p.v, 0) / n;
-  let sxx = 0, sxy = 0; xs.forEach((x, i) => { sxx += (x - mx) ** 2; sxy += (x - mx) * (pts[i].v - my); });
-  const b = sxx ? sxy / sxx : 0; return { a: my - b * mx, b };
-}
-function E1RMChart({ pts }) {
+const strengthLabel = rs => rs.unit === "lb" ? `${rs.N}-rep strength` : "Reps at bodyweight";
+const fmtStrength = (rs, v) => rs.unit === "lb" ? `${PL.round5(v)} lb` : `${Math.round(v)} reps`;
+const targetStr = (tg, short) => !tg ? "" : tg.unit === "reps" ? `${tg.reps} reps at bodyweight` : `${tg.a[0]} × ${tg.a[1]}${short ? " or " : " or "}${tg.b[0]} × ${tg.b[1]}`;
+function StrengthChart({ e, rs }) {
   const [range, setRange] = useState("3m"); const [hi, setHi] = useState(null); const sw = useRef(null);
-  const now = Date.now(), last = pts[pts.length - 1];
-  // projection from the last ~3 months of sessions (needs 3+ sessions over 2+ weeks); weekly change capped at ±2% of the current estimate
+  const now = Date.now(), pts = rs.pts, last = pts[pts.length - 1];
+  const tr = PL.strengthTrend(rs, now), tg = PL.nextTarget(rs, tr), up = tr && tr.status === "up";
   const recent = pts.filter(p => p.d >= now - 90 * DAY);
-  let proj = null;
-  if (recent.length >= 3 && recent[recent.length - 1].d - recent[0].d >= 14 * DAY) {
-    const f = fitTrend(recent), cap = last.v * .02 / 7, b = Math.max(-cap, Math.min(cap, f.b));
-    const v0 = f.a + f.b * (now / DAY); proj = { d0: now, v0, d1: now + 90 * DAY, v1: v0 + b * 90, perWk: b * 7 };
-  }
   const show = range === "3m" ? (recent.length ? recent : [last]) : pts;
+  const proj = range === "3m" && up ? tr : null;
   const x0 = range === "3m" ? now - 90 * DAY : Math.min(pts[0].d, now - 30 * DAY);
-  const x1 = range === "3m" ? (proj ? proj.d1 : now + 14 * DAY) : now + 7 * DAY;
-  const vals = show.map(p => p.v).concat(range === "3m" && proj ? [proj.v0, proj.v1] : []);
-  let lo = Math.min(...vals), up = Math.max(...vals); const pad = Math.max(5, (up - lo) * .12); lo -= pad; up += pad;
-  const ys = niceStep(up - lo, 4); lo = Math.floor(lo / ys) * ys; up = Math.ceil(up / ys) * ys;
-  const W = 340, H = 232, L = 46, R = 12, T = 14, B = 44;
-  const X = d => L + (d - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - lo) / (up - lo)) * (H - T - B);
-  const yt = []; for (let v = lo; v <= up + 1e-6; v += ys) yt.push(v);
-  // month ticks, thinned so labels never collide
+  const x1 = range === "3m" ? now + (proj ? 28 : 10) * DAY : now + 7 * DAY;
+  const vals = show.map(p => p.v).concat(proj ? [proj.v0, proj.v1 + proj.band(proj.d1), proj.v1 - proj.band(proj.d1)] : []);
+  let lo = Math.min(...vals), hiV = Math.max(...vals); const pad = Math.max(rs.unit === "lb" ? 5 : 1, (hiV - lo) * .12); lo -= pad; hiV += pad;
+  const ys = Math.max(rs.unit === "reps" ? 1 : 5, niceStep(hiV - lo, 4)); lo = Math.max(0, Math.floor(lo / ys) * ys); hiV = Math.ceil(hiV / ys) * ys;
+  const W = 340, H = 232, L = 46, R = 14, T = 14, B = 44;
+  const X = d => L + (d - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - lo) / (hiV - lo)) * (H - T - B);
+  const yt = []; for (let v = lo; v <= hiV + 1e-6; v += ys) yt.push(v);
   const span = (x1 - x0) / (30 * DAY), every = span <= 7 ? 1 : span <= 14 ? 2 : span <= 24 ? 3 : 6;
   const xt = []; const dd = new Date(x0); dd.setDate(1); dd.setHours(0, 0, 0, 0); dd.setMonth(dd.getMonth() + 1);
   const multiYear = new Date(x0).getFullYear() !== new Date(x1).getFullYear();
@@ -335,40 +328,48 @@ function E1RMChart({ pts }) {
   const first = show[0]; const gain = last.v - first.v;
   const pick = ev => { const r = ev.currentTarget.getBoundingClientRect(); const px = (ev.clientX - r.left) / r.width * W;
     let best = null, bd = 1e9; show.forEach(p => { const d = Math.abs(X(p.d) - px); if (d < bd) { bd = d; best = p; } }); setHi(bd < 30 ? best : null); };
-  const tStart = e => { sw.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
-  const tEnd = e => { const s0 = sw.current; sw.current = null; if (!s0) return; const dx = e.changedTouches[0].clientX - s0.x, dy = e.changedTouches[0].clientY - s0.y;
+  const tStart = ev => { sw.current = { x: ev.touches[0].clientX, y: ev.touches[0].clientY }; };
+  const tEnd = ev => { const s0 = sw.current; sw.current = null; if (!s0) return; const dx = ev.changedTouches[0].clientX - s0.x, dy = ev.changedTouches[0].clientY - s0.y;
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { setHi(null); setRange(dx < 0 ? "all" : "3m"); } };
   const fd = (t, o = { month: "short", day: "numeric" }) => fmtDate(t, o);
-  const tip = hi && (() => { const tx = Math.min(Math.max(X(hi.d), L + 58), W - R - 58), ty = Y(hi.v) - 14 < T + 30 ? Y(hi.v) + 14 : Y(hi.v) - 44;
+  const gainTxt = v => rs.unit === "lb" ? `${v >= 0 ? "+" : "−"}${Math.abs(Math.round(v))} lb` : `${v >= 0 ? "+" : "−"}${Math.abs(Math.round(v))} rep${Math.abs(Math.round(v)) === 1 ? "" : "s"}`;
+  const tip = hi && (() => { const tx = Math.min(Math.max(X(hi.d), L + 62), W - R - 62), ty = Y(hi.v) - 14 < T + 30 ? Y(hi.v) + 14 : Y(hi.v) - 46;
     return html`<g pointer-events="none"><line x1=${X(hi.d)} x2=${X(hi.d)} y1=${T} y2=${H - B} stroke="var(--fg3)" stroke-width="1"/>
-      <rect x=${tx - 56} y=${ty} width="112" height="34" rx="7" fill="var(--fg)"/><text x=${tx} y=${ty + 14} text-anchor="middle" class="ct-tip b">${Math.round(hi.v)} lb</text>
-      <text x=${tx} y=${ty + 27} text-anchor="middle" class="ct-tip">${fd(hi.d, { month: "short", day: "numeric", year: "numeric" })}</text></g>`; })();
+      <rect x=${tx - 60} y=${ty} width="120" height="36" rx="7" fill="var(--fg)"/><text x=${tx} y=${ty + 15} text-anchor="middle" class="ct-tip b">${rs.unit === "lb" ? Math.round(hi.v) + " lb × " + rs.N : Math.round(hi.v) + " reps"}</text>
+      <text x=${tx} y=${ty + 28} text-anchor="middle" class="ct-tip">${fd(hi.d)} · did ${setStr(e, hi.set)}</text></g>`; })();
+  const band = proj && (() => { const n = 12, upr = [], dn = [];
+    for (let k = 0; k <= n; k++) { const t = proj.d0 + (proj.d1 - proj.d0) * k / n, v = proj.v0 + (proj.v1 - proj.v0) * k / n, w = proj.band(t); upr.push(`${X(t).toFixed(1)} ${Y(v + w).toFixed(1)}`); dn.unshift(`${X(t).toFixed(1)} ${Y(Math.max(lo, v - w)).toFixed(1)}`); }
+    return "M" + upr.join("L") + "L" + dn.join("L") + "Z"; })();
   return html`<div class="card ct" style="padding:12px 10px 10px">
-    <div class="row" style="gap:8px;padding:0 4px 8px"><div class="grow">
-        <div class="ct-big num">${Math.round(last.v)}<span> lb</span></div>
-        <div class="tiny muted num">${range === "3m" ? (show.length > 1 ? `${gain >= 0 ? "+" : "−"}${Math.abs(Math.round(gain))} lb since ${fd(first.d)}` : "Latest estimate") : `${gain >= 0 ? "+" : "−"}${Math.abs(Math.round(gain))} lb since ${fd(first.d, { month: "short", year: "numeric" })}`}</div></div>
-      <div class="seg" style="width:150px" role="group" aria-label="Time range"><button class=${range === "3m" ? "on" : ""} onClick=${() => { setRange("3m"); setHi(null); }}>3 months</button><button class=${range === "all" ? "on" : ""} onClick=${() => { setRange("all"); setHi(null); }}>All time</button></div></div>
-    <svg viewBox=${`0 0 ${W} ${H}`} width="100%" role="img" style="touch-action:pan-y;display:block" onPointerDown=${pick} onPointerMove=${e => e.buttons || e.pointerType === "mouse" ? pick(e) : null} onPointerLeave=${() => setHi(null)} onTouchStart=${tStart} onTouchEnd=${tEnd}
-      aria-label=${`Estimated one-rep max, ${range === "3m" ? "last 3 months with 3-month projection" : "all time"}. Latest ${Math.round(last.v)} pounds.`}>
+    <div class="row" style="gap:8px;padding:0 4px 8px;align-items:flex-start"><div class="grow" style="min-width:0">
+        <div class="tiny muted b">${strengthLabel(rs)}</div>
+        <div class="ct-big num">${rs.unit === "lb" ? PL.round5(last.v) : Math.round(last.v)}<span> ${rs.unit}</span></div>
+        <div class="tiny muted num">${show.length > 1 ? `${gainTxt(gain)} since ${range === "3m" ? fd(first.d) : fd(first.d, { month: "short", year: "numeric" })}` : "Latest session"}</div></div>
+      <div class="seg" style="width:150px;flex:none" role="group" aria-label="Time range"><button class=${range === "3m" ? "on" : ""} onClick=${() => { setRange("3m"); setHi(null); }}>3 months</button><button class=${range === "all" ? "on" : ""} onClick=${() => { setRange("all"); setHi(null); }}>All time</button></div></div>
+    <svg viewBox=${`0 0 ${W} ${H}`} width="100%" role="img" style="touch-action:pan-y;display:block" onPointerDown=${pick} onPointerMove=${ev => ev.buttons || ev.pointerType === "mouse" ? pick(ev) : null} onPointerLeave=${() => setHi(null)} onTouchStart=${tStart} onTouchEnd=${tEnd}
+      aria-label=${`${strengthLabel(rs)}, ${range === "3m" ? "last 3 months" + (proj ? " with 4-week projection" : "") : "all time"}. Latest ${fmtStrength(rs, last.v)}.`}>
       ${yt.map(v => html`<line x1=${L} x2=${W - R} y1=${Y(v)} y2=${Y(v)} stroke="var(--line)" stroke-width="1"/><text x=${L - 6} y=${Y(v) + 4} text-anchor="end" class="ct-ax">${Math.round(v)}</text>`)}
       ${xt.map(t => html`<line x1=${X(t)} x2=${X(t)} y1=${H - B} y2=${H - B + 4} stroke="var(--fg3)"/><text x=${X(t)} y=${H - B + 16} text-anchor="middle" class="ct-ax">${mlab(t)}</text>`)}
       <line x1=${L} x2=${W - R} y1=${H - B} y2=${H - B} stroke="var(--fg3)" stroke-width="1"/>
-      <text transform=${`translate(11 ${(T + H - B) / 2}) rotate(-90)`} text-anchor="middle" class="ct-at">Est. 1RM (lb)</text>
+      <text transform=${`translate(11 ${(T + H - B) / 2}) rotate(-90)`} text-anchor="middle" class="ct-at">${rs.unit === "lb" ? `Weight for ${rs.N} reps (lb)` : "Reps at bodyweight"}</text>
       <text x=${(L + W - R) / 2} y=${H - 6} text-anchor="middle" class="ct-at">Date</text>
-      ${range === "3m" && proj && html`<rect x=${X(now)} y=${T} width=${X(proj.d1) - X(now)} height=${H - B - T} fill="var(--sunk)" opacity=".6"/>
-        <text x=${(X(now) + X(proj.d1)) / 2} y=${T + 11} text-anchor="middle" class="ct-ax">Projected</text>`}
+      ${proj && html`<path d=${band} fill="var(--red)" opacity=".12"/>`}
       <line x1=${X(now)} x2=${X(now)} y1=${T} y2=${H - B} stroke="var(--fg3)" stroke-width="1" stroke-dasharray="2 3"/>
-      <text x=${X(now)} y=${H - B - 5} text-anchor=${range === "3m" ? "end" : "end"} dx="-4" class="ct-ax">Today</text>
-      ${range === "3m" && proj && html`<path d=${`M${X(last.d)} ${Y(last.v)}L${X(proj.d1)} ${Y(proj.v1)}`} fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>
+      <text x=${X(now)} y=${T + 10} text-anchor="end" dx="-4" class="ct-ax">Today</text>
+      ${proj && html`<path d=${`M${X(last.d)} ${Y(last.v)}L${X(proj.d0)} ${Y(proj.v0)}L${X(proj.d1)} ${Y(proj.v1)}`} fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>
         <circle cx=${X(proj.d1)} cy=${Y(proj.v1)} r="4" fill="var(--card)" stroke="var(--red)" stroke-width="2"/>
-        <text x=${X(proj.d1) - 6} y=${Y(proj.v1) + (proj.v1 >= last.v ? -9 : 17)} text-anchor="end" class="ct-lab">~${Math.round(proj.v1)}</text>`}
+        <text x=${X(proj.d1) - 6} y=${Y(proj.v1 + proj.band(proj.d1)) - 6} text-anchor="end" class="ct-lab">~${fmtStrength(rs, proj.v1)}</text>`}
       ${show.length > 1 && html`<path d=${line} fill="none" stroke="var(--red)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`}
       ${(show.length <= 16 ? show : [last]).map(p => html`<circle cx=${X(p.d)} cy=${Y(p.v)} r="3.5" fill="var(--red)"/>`)}
       ${hi && html`<circle cx=${X(hi.d)} cy=${Y(hi.v)} r="5.5" fill="var(--red)" stroke="var(--card)" stroke-width="2"/>`}
       ${tip}
     </svg>
-    <div class="ct-key tiny muted"><span><i class="k-solid"></i>Each workout</span>${range === "3m" && proj && html`<span><i class="k-dash"></i>Projected at your pace</span>`}</div>
-    <p class="tiny muted" style="margin:8px 4px 0">${range === "3m" ? (proj ? html`At your recent pace (${proj.perWk >= 0 ? "+" : "−"}${Math.abs(proj.perWk).toFixed(1)} lb/week) you'd reach about <b class="num" style="color:var(--fg)">${Math.round(proj.v1)} lb</b> by ${fd(proj.d1)}. ` : "Log this lift 3+ times over 2+ weeks to see a projection. ") : ""}Estimated 1RM is the most you could lift for one rep, worked out from your best set each workout. Swipe the chart or tap a point for details.</p>
+    <div class="ct-key tiny muted"><span><i class="k-solid"></i>Best set each session</span>${proj && html`<span><i class="k-dash"></i>Next 4 weeks</span><span><i class="k-band"></i>Likely range</span>`}</div>
+    ${range === "3m" && tr && html`<div class="ct-note small">${tr.status === "up" ? html`At your pace (${rs.unit === "lb" ? `+${tr.perWk.toFixed(1)} lb` : `+${tr.perWk.toFixed(1)} reps`}/week) you'd be around <b class="num">${fmtStrength(rs, tr.v1)}</b> by ${fd(tr.d1)}.`
+      : tr.status === "steady" ? html`<b>Holding steady.</b> No clear upward trend over the last 8 weeks, so there's no projection. The target below is how to break through.`
+      : html`Log this lift ${3 - Math.min(2, tr.n)} more time${3 - Math.min(2, tr.n) === 1 ? "" : "s"} over 2+ weeks to see a projection.`}</div>`}
+    ${tg && html`<div class="ct-target"><span class="ct-tl">Next session target</span><span class="ct-tv num">${targetStr(tg)}</span></div>`}
+    <p class="tiny muted" style="margin:8px 4px 0">${rs.unit === "lb" ? `${rs.N}-rep strength is the weight you could lift for ${rs.N} reps, your most common rep count here, worked out from each session's best set. Extra sets don't change it.` : "Reps at bodyweight is your best set each session. Sets with added weight are converted to what you could do at plain bodyweight."} Tap a point for details; swipe for all time.</p>
   </div>`;
 }
 /* How-to: a verified YouTube tutorial per built-in exercise, plus form tips for the technical ones */
